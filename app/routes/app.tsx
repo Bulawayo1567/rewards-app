@@ -34,6 +34,8 @@ export default function App() {
         <s-link href="/app/tiers">Tiers</s-link>
         <s-link href="/app/earn-rules">Ways to earn</s-link>
         <s-link href="/app/product-rules">Product rules</s-link>
+        <s-link href="/app/rewards">Rewards</s-link>
+        <s-link href="/app/import">Import</s-link>
         <s-link href="/app/settings">Settings</s-link>
       </s-app-nav>
       <Outlet />

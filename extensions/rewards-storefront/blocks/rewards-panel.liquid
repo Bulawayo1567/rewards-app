@@ -1,0 +1,24 @@
+{%- comment -%} App block: place the rewards panel anywhere via the theme editor {%- endcomment -%}
+<div class="aas-rewards-panel" data-aas-rewards-panel style="--aas-accent: {{ block.settings.color }}">
+  <div class="aas-rw-loading">Loading your rewards…</div>
+</div>
+{{ 'rewards.css' | asset_url | stylesheet_tag }}
+<script>
+  window.AASRewards = window.AASRewards || {};
+  window.AASRewards.config = window.AASRewards.config || {
+    root: "{{ routes.root_url }}", color: {{ block.settings.color | json }}, launcher: false, accountPanel: false, productPoints: false,
+    loggedIn: {% if customer %}true{% else %}false{% endif %}, template: {{ template.name | json }},
+    accountUrl: "{{ routes.account_url }}", loginUrl: "{{ routes.account_login_url }}", registerUrl: "{{ routes.account_register_url }}"
+  };
+</script>
+<script src="{{ 'rewards.js' | asset_url }}" defer></script>
+
+{% schema %}
+{
+  "name": "Rewards panel",
+  "target": "section",
+  "settings": [
+    { "type": "color", "id": "color", "label": "Accent colour", "default": "#c60d11" }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,8 @@
+api_version = "2025-10"
+
+[[extensions]]
+type = "theme"
+name = "rewards-storefront"
+handle = "rewards-storefront"
+
+uid = "d6be21c3-1769-0ee7-5b72-dd58d879b489b5d9fc4e"

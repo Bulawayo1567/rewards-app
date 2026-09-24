@@ -1,0 +1,51 @@
+{%- comment -%} App embed: floating launcher + account-page panel + product-page points line {%- endcomment -%}
+<script>
+  window.AASRewards = window.AASRewards || {};
+  window.AASRewards.config = {
+    root: "{{ routes.root_url }}",
+    color: {{ block.settings.color | json }},
+    launcher: {{ block.settings.show_launcher | json }},
+    launcherLabel: {{ block.settings.launcher_label | json }},
+    launcherPosition: {{ block.settings.launcher_position | json }},
+    accountPanel: {{ block.settings.account_panel | json }},
+    accountSelector: {{ block.settings.account_selector | json }},
+    productPoints: {{ block.settings.product_points | json }},
+    productSelector: {{ block.settings.product_selector | json }},
+    loggedIn: {% if customer %}true{% else %}false{% endif %},
+    template: {{ template.name | json }},
+    accountUrl: "{{ routes.account_url }}",
+    loginUrl: "{{ routes.account_login_url }}",
+    registerUrl: "{{ routes.account_register_url }}",
+    {%- if template.name == 'product' and product -%}
+    product: { id: {{ product.id }}, vendor: {{ product.vendor | json }}, variants: {{ product.variants | map: 'id' | json }},
+               prices: {{ product.variants | map: 'price' | json }}, selected: {{ product.selected_or_first_available_variant.id }} },
+    {%- endif -%}
+    {%- if customer -%}
+    metaBalance: {{ customer.metafields.rewards.balance.value | default: 0 }},
+    metaTier: {{ customer.metafields.rewards.tier.value | json }},
+    {%- endif -%}
+  };
+</script>
+{{ 'rewards.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'rewards.js' | asset_url }}" defer></script>
+
+{% schema %}
+{
+  "name": "Rewards widget",
+  "target": "body",
+  "settings": [
+    { "type": "color", "id": "color", "label": "Accent colour", "default": "#c60d11" },
+    { "type": "header", "content": "Floating launcher" },
+    { "type": "checkbox", "id": "show_launcher", "label": "Show floating launcher button", "default": true },
+    { "type": "text", "id": "launcher_label", "label": "Launcher label", "default": "Rewards" },
+    { "type": "select", "id": "launcher_position", "label": "Position", "default": "right",
+      "options": [ { "value": "left", "label": "Bottom left" }, { "value": "right", "label": "Bottom right" } ] },
+    { "type": "header", "content": "Account page" },
+    { "type": "checkbox", "id": "account_panel", "label": "Insert rewards panel on the account page", "default": true },
+    { "type": "text", "id": "account_selector", "label": "Insert before (CSS selector)", "default": ".customer-account, #MainContent, main", "info": "First match wins. Leave the default unless the panel lands in the wrong place." },
+    { "type": "header", "content": "Product page" },
+    { "type": "checkbox", "id": "product_points", "label": "Show 'Earn N points' on product pages", "default": true },
+    { "type": "text", "id": "product_selector", "label": "Insert after (CSS selector)", "default": ".product__price, .price, .product-single__price", "info": "First match wins." }
+  ]
+}
+{% endschema %}

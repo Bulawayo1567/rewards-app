@@ -3,6 +3,7 @@ import { Form, useLoaderData } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
+import { useActionToast } from "../lib/rewards/use-toast";
 import { num, bool } from "../lib/rewards/format";
 
 const EVENTS = [
@@ -34,11 +35,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }),
     ),
   );
-  return { ok: true };
+  return { ok: true, message: "Earning rules saved" };
 };
 
 export default function EarnRules() {
   const { byEvent } = useLoaderData<typeof loader>();
+  useActionToast();
   return (
     <s-page heading="Ways to earn">
       <Form method="post">

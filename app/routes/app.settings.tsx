@@ -4,6 +4,7 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { getProgram } from "../lib/rewards/program.server";
+import { useActionToast } from "../lib/rewards/use-toast";
 import { str, num, bool } from "../lib/rewards/format";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -29,12 +30,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       codePrefix: (str(fd, "codePrefix") || "RW").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6),
     },
   });
-  return { ok: true };
+  return { ok: true, message: "Settings saved" };
 };
 
 export default function Settings() {
   const { program } = useLoaderData<typeof loader>();
   const nav = useNavigation();
+  useActionToast();
   const saving = nav.state !== "idle";
   return (
     <s-page heading="Program settings">

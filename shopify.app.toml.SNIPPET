@@ -1,0 +1,8 @@
+# 1) In [access_scopes], add write_app_proxy to the scopes list:
+scopes = "read_customers,write_customers,read_orders,write_discounts,read_products,write_products,read_marketing_events,write_app_proxy"
+
+# 2) Add this new section at the END of shopify.app.toml:
+[app_proxy]
+url = "/proxy"
+prefix = "apps"
+subpath = "rewards"

@@ -1,0 +1,17 @@
+# Open extensions\rewards-account\shopify.extension.toml and make it look like this,
+# BUT KEEP YOUR EXISTING uid = "..." LINE (don't change it).
+
+api_version = "2025-10"
+
+[[extensions]]
+uid = "KEEP-YOUR-EXISTING-VALUE"
+type = "ui_extension"
+name = "Rewards"
+handle = "rewards-account"
+
+  [[extensions.targeting]]
+  module = "./src/RewardsPage.jsx"
+  target = "customer-account.page.render"
+
+  [extensions.capabilities]
+  network_access = true
