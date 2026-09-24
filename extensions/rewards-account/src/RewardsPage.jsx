@@ -1,7 +1,7 @@
 import "@shopify/ui-extensions/preact";
 import { render } from "preact";
 import { useEffect, useState } from "preact/hooks";
-import { APP_URL } from "./config.js";
+import { appUrlFor } from "./config.js";
 
 export default async () => { render(<RewardsPage />, document.body); };
 
@@ -12,9 +12,13 @@ const fmt = (n) => Number(n || 0).toLocaleString();
 const money = (n) => "$" + Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
 const date = (s) => new Date(s).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 
+function shopFromToken(token) {
+  const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+  return String(payload.dest || "").replace(/^https?:\/\//, "");
+}
 async function api(path, body) {
   const token = await shopify.sessionToken.get();
-  const r = await fetch(`${APP_URL}/proxy/account/${path}`, {
+  const r = await fetch(`${appUrlFor(shopFromToken(token))}/proxy/account/${path}`, {
     method: body ? "POST" : "GET",
     headers: { Authorization: `Bearer ${token}`, ...(body ? { "Content-Type": "application/json" } : {}) },
     body: body ? JSON.stringify(body) : undefined,
