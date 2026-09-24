@@ -1,13 +1,12 @@
-1) Unzip into C:\Users\info\Downloads\rewards-app\ (merge; YES to replace app\lib\rewards\storefront.server.ts)
+Unzip into C:\Users\info\Downloads\rewards-app\ (merge).
 
-   Backend:  app\lib\rewards\account-auth.server.ts (new)
-             app\lib\rewards\storefront.server.ts (replaced — adds history + offers)
-             app\routes\proxy.account.me.tsx, proxy.account.redeem.tsx, proxy.account.birthday.tsx (new)
-   Extension: extensions\rewards-account\src\RewardsPage.jsx (new)
+Backend (new):
+  app\lib\rewards\campaigns.server.ts
+  app\routes\proxy.campaign.tsx, proxy.play.tsx
+  app\routes\app.campaigns._index.tsx, app.campaigns.$id.tsx
+Theme extension (new):
+  extensions\rewards-storefront\blocks\rewards-popup.liquid
+  extensions\rewards-storefront\assets\popup.js, popup.css
 
-2) DELETE extensions\rewards-account\src\OrderStatusBlock.jsx
-
-3) Edit extensions\rewards-account\shopify.extension.toml as shown in shopify.extension.toml.SNIPPET
-   (keep the uid line; change target + module; add network_access). Delete the SNIPPET file after.
-
-4) Restart the dev server (q, then shopify app dev).
+Nav: in app\routes\app.tsx add inside <s-app-nav>, after the Import line:
+        <s-link href="/app/campaigns">Campaigns</s-link>

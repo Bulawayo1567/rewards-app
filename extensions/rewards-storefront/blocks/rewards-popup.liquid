@@ -1,0 +1,24 @@
+{%- comment -%} App embed: entry pop-up (spin wheel / scratch card / instant win), controlled from the Rewards app → Campaigns {%- endcomment -%}
+<script>
+  window.AASPopup = {
+    root: "{{ routes.root_url }}",
+    page: {% if template.name == 'index' %}"home"{% elsif template.name == 'product' %}"product"{% elsif template.name == 'collection' or template.name == 'list-collections' %}"collection"{% else %}"other"{% endif %},
+    email: {% if customer %}{{ customer.email | json }}{% else %}null{% endif %},
+    hideOnMobile: {{ block.settings.hide_on_mobile | json }},
+    hideDays: {{ block.settings.hide_days | json }}
+  };
+</script>
+{{ 'popup.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'popup.js' | asset_url }}" defer></script>
+
+{% schema %}
+{
+  "name": "Rewards pop-up",
+  "target": "body",
+  "settings": [
+    { "type": "paragraph", "content": "Prizes, timing and copy are managed in the Rewards app under Campaigns. This embed just switches the pop-up on for the theme." },
+    { "type": "checkbox", "id": "hide_on_mobile", "label": "Don't show on phones", "default": false },
+    { "type": "range", "id": "hide_days", "label": "After closing without playing, wait this many days", "min": 0, "max": 30, "step": 1, "default": 3 }
+  ]
+}
+{% endschema %}

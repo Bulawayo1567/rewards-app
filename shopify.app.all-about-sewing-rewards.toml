@@ -26,3 +26,22 @@ api_version = "2025-10"
   [[webhooks.subscriptions]]
   topics = [ "refunds/create" ]
   uri = "/webhooks/refunds/create"
+
+  [[webhooks.subscriptions]]
+  topics = [ "customers/create" ]
+  uri = "/webhooks/customers/create"
+
+  [[webhooks.subscriptions]]
+  topics = [ "customers/update" ]
+  uri = "/webhooks/customers/update"
+
+[app_proxy]
+url = "/proxy"
+prefix = "apps"
+subpath = "rewards"
+
+[auth]
+redirect_urls = [ "https://aas-rewards.vercel.app/api/auth" ]
+
+[build]
+automatically_update_urls_on_dev = false
