@@ -1,0 +1,4 @@
+In app\lib\rewards\storefront.server.ts, find:
+    program: { name: program.name, pointsName: program.pointsName, pointsPerDollar: Number(program.pointsPerDollar), minRedeemPoints: program.minRedeemPoints },
+replace with:
+    program: { name: program.name, pointsName: program.pointsName, pointsPerDollar: Number(program.pointsPerDollar), minRedeemPoints: program.minRedeemPoints, pointValueCents: Number(program.pointValueCents ?? 1) },

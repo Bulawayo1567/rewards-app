@@ -1,0 +1,5 @@
+In prisma\schema.prisma, inside `model Program { ... }`, add this line after `pointsName`:
+
+  pointValueCents       Decimal  @default(1) @db.Decimal(10, 4) // how many cents one point is worth when redeemed (1 = 100 pts per $1)
+
+Then run:  npx prisma migrate dev --name point_value

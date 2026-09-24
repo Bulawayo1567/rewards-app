@@ -1,0 +1,7 @@
+In app\routes\app.settings.tsx:
+
+1) In the action's `data: { ... }` add:
+      pointValueCents: num(fd, "pointValueCents", 1),
+
+2) In the "Redeeming" section, add above the minRedeemPoints field:
+          <s-number-field name="pointValueCents" label="Value of one point (cents)" defaultValue={String(program.pointValueCents)} step={0.25} min={0} details="Shown to customers as 'Worth $X in rewards'. 1 = 100 points per $1." />

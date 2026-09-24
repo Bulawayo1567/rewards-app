@@ -58,7 +58,8 @@ export async function buildMePayload(shop: string, customerId: string | null, op
   ]);
 
   const base = {
-    program: { name: program.name, pointsName: program.pointsName, pointsPerDollar: Number(program.pointsPerDollar), minRedeemPoints: program.minRedeemPoints },
+    program: { name: program.name, pointsName: program.pointsName, pointsPerDollar: Number(program.pointsPerDollar), minRedeemPoints: program.minRedeemPoints, pointValueCents: Number(program.pointValueCents ?? 1) },
+
     tiers: tiers.map((t) => ({ name: t.name, rank: t.rank, threshold: Number(t.threshold), basis: t.basis, multiplier: Number(t.multiplier), perks: t.perks, color: t.color })),
     waysToEarn: earn.map((e) => ({ event: e.event, points: e.points })),
     rewards: rewards.map((r) => ({ id: r.id, name: r.name, type: r.type, pointsCost: r.pointsCost, minTierRank: r.minTierRank, minOrderSubtotal: r.minOrderSubtotal == null ? null : Number(r.minOrderSubtotal) })),

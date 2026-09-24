@@ -39,6 +39,7 @@ model Program {
   currency              String   @default("CAD")
   pointsPerDollar       Decimal  @default(1) @db.Decimal(10, 4) // base earn rate
   pointsName            String   @default("points")
+  pointValueCents       Decimal  @default(1) @db.Decimal(10, 4)
   holdDays              Int      @default(0)   // days before order points become available (return window)
   expiryMonths          Int?                   // null = never expire
   minRedeemPoints       Int      @default(0)

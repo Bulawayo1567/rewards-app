@@ -9,6 +9,8 @@ const EARN_LABEL = { SIGNUP: "Create an account", NEWSLETTER: "Join our newslett
 const TYPE_LABEL = { ORDER: "Order", ORDER_REVERSAL: "Refund", REDEEM: "Redeemed", REDEEM_REVERSAL: "Redemption reversed", BIRTHDAY: "Birthday", NEWSLETTER: "Newsletter", SIGNUP: "Welcome bonus", REVIEW: "Review", REFERRAL: "Referral", CAMPAIGN: "Prize", ADJUSTMENT: "Adjustment", EXPIRY: "Expired", MIGRATION: "Transferred balance" };
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const fmt = (n) => Number(n || 0).toLocaleString();
+const titleCase = (t) => String(t ?? "").replace(/\b([a-z])/g, (m) => m.toUpperCase());
+const money2 = (n) => "$" + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const money = (n) => "$" + Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
 const date = (s) => new Date(s).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 
@@ -40,26 +42,29 @@ function RewardsPage() {
 
   const { program, me, rewards, waysToEarn, offers } = data;
   const pn = program.pointsName;
-  const tabs = [["rewards", "Redeem"], ["offers", "Bonus offers"], ["earn", "Ways to earn"], ["codes", "My codes"], ["history", "History"]];
+  const tabs = [["rewards", "Stitch Up Some Savings"], ["offers", "Bonus Offers"], ["earn", "Thread Your Way To More"], ["codes", "In Your Sewing Basket"], ["history", "History"]];
+  const worth = (me.balance * Number(program.pointValueCents || 0)) / 100;
 
   return (
     <s-page heading={program.name}>
       <s-section>
-        <s-stack direction="inline" gap="base" justifyContent="space-between" alignItems="center">
-          <s-stack gap="none">
-            <s-text>{me.firstName ? `Hi ${me.firstName}, you have` : "You have"}</s-text>
-            <s-heading>{fmt(me.balance)} {pn}</s-heading>
-            {me.pending > 0 && <s-text tone="subdued">{fmt(me.pending)} pending</s-text>}
+        <s-stack gap="small" alignItems="center">
+          <s-heading>{me.firstName ? `Hi, ${me.firstName}!` : "Your Rewards"}</s-heading>
+          <s-stack direction="inline" gap="small" alignItems="baseline">
+            <s-text size="extra-large" emphasis="bold">{fmt(me.balance)}</s-text>
+            <s-text>{pn}</s-text>
           </s-stack>
+          {worth > 0 && <s-badge tone="success">Worth {money2(worth)} In Rewards</s-badge>}
+          {me.pending > 0 && <s-text tone="subdued">{fmt(me.pending)} pending</s-text>}
           {me.tier && <s-badge tone="info">{me.tier.name}{me.tier.multiplier > 1 ? ` · ${me.tier.multiplier}× ${pn}` : ""}</s-badge>}
         </s-stack>
         {me.nextTier ? (
           <s-stack gap="small">
             <s-progress value={me.nextTier.progress} max={100} accessibilityLabel="Progress to next tier" />
-            <s-text tone="subdued">{me.nextTier.basis === "LIFETIME_POINTS" ? `${fmt(me.nextTier.needed)} more ${pn}` : `${money(me.nextTier.needed)} more in purchases`} to reach <s-text emphasis="bold">{me.nextTier.name}</s-text></s-text>
+            <s-text>{me.nextTier.basis === "LIFETIME_POINTS" ? `${fmt(me.nextTier.needed)} more ${pn}` : `${money(me.nextTier.needed)} more in purchases`} to reach <s-text emphasis="bold">{me.nextTier.name}</s-text></s-text>
           </s-stack>
         ) : me.tier ? <s-text tone="subdued">You're at our top tier.</s-text> : null}
-        {me.tier?.perks && <s-text>{me.tier.perks}</s-text>}
+        {me.tier?.perks && <s-text tone="subdued">{me.tier.perks}</s-text>}
       </s-section>
 
       <s-section>
@@ -70,12 +75,12 @@ function RewardsPage() {
 
       {tab === "rewards" && <RedeemTab data={data} onDone={load} />}
       {tab === "offers" && (
-        <s-section heading="Bonus point offers">
+        <s-section heading="Bonus Point Offers">
           {offers.length === 0 ? <s-text tone="subdued">No bonus offers right now — check back soon.</s-text> :
             <s-stack gap="base">{offers.map((o, i) => (
               <s-box key={i} padding="base" border="base" borderRadius="base">
                 <s-stack direction="inline" justifyContent="space-between" alignItems="center" gap="base">
-                  <s-stack gap="none"><s-text emphasis="bold">{o.label}</s-text><s-text tone="subdued">{o.target === "VENDOR" ? "Brand" : o.target === "COLLECTION" ? "Collection" : o.target === "TAG" ? "Tagged products" : o.target === "PRODUCT_TYPE" ? "Product type" : "Product"}{o.endsAt ? ` · until ${date(o.endsAt)}` : ""}</s-text></s-stack>
+                  <s-stack gap="none"><s-text emphasis="bold">{titleCase(o.label)}</s-text><s-text tone="subdued">{o.target === "VENDOR" ? "Brand" : o.target === "COLLECTION" ? "Collection" : o.target === "TAG" ? "Tagged products" : o.target === "PRODUCT_TYPE" ? "Product type" : "Product"}{o.endsAt ? ` · until ${date(o.endsAt)}` : ""}</s-text></s-stack>
                   <s-badge tone="success">{o.mode === "MULTIPLIER" ? `${o.value}× ${pn}` : `+${fmt(o.value)} ${pn} each`}</s-badge>
                 </s-stack>
               </s-box>))}</s-stack>}
@@ -83,21 +88,21 @@ function RewardsPage() {
         </s-section>
       )}
       {tab === "earn" && (
-        <s-section heading="Ways to earn">
+        <s-section heading="Thread Your Way To More">
           <s-stack gap="base">
-            <Row left={`Shop — every $1 spent`} right={`${program.pointsPerDollar} ${pn}`} />
+            <Row left="Shop — every $1 spent" right={`${(program.pointsPerDollar * (me.tier ? me.tier.multiplier : 1)).toFixed(2).replace(/\.?0+$/, "")} ${pn}`} />
             {waysToEarn.map((w) => <Row key={w.event} left={EARN_LABEL[w.event] || w.event} right={`${fmt(w.points)} ${pn}`} />)}
           </s-stack>
           {waysToEarn.some((w) => w.event === "BIRTHDAY") && <BirthdayBox me={me} pn={pn} onDone={load} />}
         </s-section>
       )}
       {tab === "codes" && (
-        <s-section heading="My codes">
+        <s-section heading="In Your Sewing Basket">
           {me.codes.length === 0 ? <s-text tone="subdued">Redeem a reward to get a discount code.</s-text> :
             <s-stack gap="base">{me.codes.map((c) => (
               <s-box key={c.code} padding="base" border="base" borderRadius="base">
                 <s-stack direction="inline" justifyContent="space-between" alignItems="center" gap="base">
-                  <s-stack gap="none"><s-text emphasis="bold">{c.code}</s-text><s-text tone="subdued">{c.name} · {c.status === "USED" ? "used" : `expires ${date(c.expiresAt)}`}</s-text></s-stack>
+                  <s-stack gap="none"><s-text emphasis="bold">{c.code}</s-text><s-text tone="subdued">{titleCase(c.name)} · {c.status === "USED" ? "used" : `expires ${date(c.expiresAt)}`}</s-text></s-stack>
                   {c.status !== "USED" && <s-clipboard-item text={c.code}><s-button variant="secondary">Copy</s-button></s-clipboard-item>}
                 </s-stack>
               </s-box>))}</s-stack>}
@@ -136,9 +141,9 @@ function RedeemTab({ data, onDone }) {
     finally { setBusy(null); }
   };
   return (
-    <s-section heading={`Redeem ${pn}`}>
+    <s-section heading="Stitch Up Some Savings">
       {msg && (msg.ok
-        ? <s-banner tone="success" heading={`${msg.name} — your code is ready`}>
+        ? <s-banner tone="success" heading={`${titleCase(msg.name)} — Your Code Is Ready`}>
             <s-stack direction="inline" gap="base" alignItems="center"><s-text emphasis="bold">{msg.code}</s-text><s-clipboard-item text={msg.code}><s-button variant="secondary">Copy</s-button></s-clipboard-item></s-stack>
             <s-text tone="subdued">Enter it at checkout. Valid until {date(msg.expiresAt)}.</s-text>
           </s-banner>
@@ -151,9 +156,9 @@ function RedeemTab({ data, onDone }) {
             return (
               <s-box key={r.id} padding="base" border="base" borderRadius="base">
                 <s-stack gap="small">
-                  <s-text emphasis="bold">{r.name}</s-text>
+                  <s-text emphasis="bold">{titleCase(r.name)}</s-text>
                   <s-text tone="subdued">{fmt(r.pointsCost)} {pn}{r.minOrderSubtotal ? ` · min order ${money(r.minOrderSubtotal)}` : ""}{locked ? " · higher tier required" : ""}</s-text>
-                  <s-button variant="primary" disabled={!can || busy === r.id} loading={busy === r.id} onClick={() => redeem(r)}>{can ? "Redeem" : locked ? "Locked" : `Need ${fmt(r.pointsCost - me.balance)} more`}</s-button>
+                  <s-button variant="primary" disabled={!can || busy === r.id} loading={busy === r.id} onClick={() => redeem(r)}>{can ? "Redeem" : locked ? "Higher Tier" : `Need ${fmt(r.pointsCost - me.balance)} More`}</s-button>
                 </s-stack>
               </s-box>);
           })}
@@ -174,11 +179,11 @@ function BirthdayBox({ me, pn, onDone }) {
   return (
     <s-box padding="base" border="base" borderRadius="base">
       <s-stack gap="base">
-        <s-text emphasis="bold">Tell us your birthday</s-text>
+        <s-text emphasis="bold">Your Special Day</s-text>
         <s-stack direction="inline" gap="base" alignItems="end">
           <s-select label="Month" value={month} onChange={(e) => setMonth(e.currentTarget.value)}>{MONTHS.map((m, i) => <s-option key={i} value={String(i + 1)}>{m}</s-option>)}</s-select>
           <s-select label="Day" value={day} onChange={(e) => setDay(e.currentTarget.value)}>{Array.from({ length: 31 }, (_, i) => <s-option key={i} value={String(i + 1)}>{i + 1}</s-option>)}</s-select>
-          <s-button variant="secondary" onClick={save}>Save</s-button>
+          <s-button variant="secondary" onClick={save}>Save Birthday</s-button>
         </s-stack>
         {msg && <s-banner tone={msg.ok ? "success" : "critical"}>{msg.text}</s-banner>}
       </s-stack>
