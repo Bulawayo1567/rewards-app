@@ -1,0 +1,354 @@
+// Rewards App — Prisma schema
+// Replaces the template's schema.prisma. Provider switched to PostgreSQL (Neon).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Shopify session (required by the template) ───────────────────────────────
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+  refreshToken  String?
+  refreshTokenExpires DateTime?
+}
+
+// ─── Program settings (one row per shop) ──────────────────────────────────────
+model Program {
+  id                    String   @id @default(cuid())
+  shop                  String   @unique
+  name                  String   @default("All About Sewing Rewards")
+  currency              String   @default("CAD")
+  pointsPerDollar       Decimal  @default(1) @db.Decimal(10, 4) // base earn rate
+  pointsName            String   @default("points")
+  holdDays              Int      @default(0)   // days before order points become available (return window)
+  expiryMonths          Int?                   // null = never expire
+  minRedeemPoints       Int      @default(0)
+  earnOnDiscountedTotal Boolean  @default(true) // earn on subtotal after discounts
+  earnOnShipping        Boolean  @default(false)
+  earnOnTax             Boolean  @default(false)
+  active                Boolean  @default(true)
+  codePrefix            String   @default("RW")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+// ─── Customers (mirror of Shopify customer + cached balance) ──────────────────
+model Customer {
+  id              String   @id @default(cuid())
+  shop            String
+  shopifyId       String?             // gid://shopify/Customer/123 — null until they have an account
+  email           String
+  firstName       String?
+  lastName        String?
+  birthday        DateTime?           // month/day matter; year optional (store as date, year 1900 if unknown)
+  birthdayAwardedYear Int?            // last year a birthday reward was granted
+  newsletterAwarded   Boolean @default(false)
+  signupAwarded       Boolean @default(false)
+  balance         Int      @default(0) // cached available balance (sum of ledger where status=AVAILABLE)
+  pendingBalance  Int      @default(0) // cached held points
+  lifetimePoints  Int      @default(0)
+  lifetimeSpend   Decimal  @default(0) @db.Decimal(12, 2)
+  tierId          String?
+  tier            Tier?    @relation(fields: [tierId], references: [id])
+  tierAssignedAt  DateTime?
+  smileId         String?             // Smile.io customer id, kept for reconciliation
+  ledger          PointsLedger[]
+  redemptions     Redemption[]
+  plays           CampaignPlay[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([shop, email])
+  @@index([shop, shopifyId])
+  @@index([shop, tierId])
+}
+
+// ─── Points ledger (append-only) ──────────────────────────────────────────────
+enum LedgerType {
+  ORDER            // earned from an order
+  ORDER_REVERSAL   // refund / cancel claws back
+  REDEEM           // spent on a reward
+  REDEEM_REVERSAL  // reward refunded, points returned
+  BIRTHDAY
+  NEWSLETTER
+  SIGNUP
+  REVIEW
+  REFERRAL
+  CAMPAIGN         // pop-up / wheel prize paid in points
+  ADJUSTMENT       // manual, by staff
+  EXPIRY
+  MIGRATION        // Smile.io opening balance
+}
+
+enum LedgerStatus {
+  PENDING          // held until holdDays elapse
+  AVAILABLE
+  REVERSED
+  EXPIRED
+}
+
+model PointsLedger {
+  id           String       @id @default(cuid())
+  shop         String
+  customerId   String
+  customer     Customer     @relation(fields: [customerId], references: [id])
+  type         LedgerType
+  status       LedgerStatus @default(AVAILABLE)
+  points       Int                       // positive = credit, negative = debit
+  orderId      String?                   // gid://shopify/Order/…
+  orderName    String?                   // #1234
+  redemptionId String?
+  note         String?
+  staffEmail   String?                   // for ADJUSTMENT
+  availableAt  DateTime?                 // when PENDING flips to AVAILABLE
+  expiresAt    DateTime?
+  createdAt    DateTime     @default(now())
+
+  @@index([shop, customerId, createdAt])
+  @@index([shop, orderId])
+  @@index([status, availableAt])
+  @@index([status, expiresAt])
+}
+
+// ─── Tiers ────────────────────────────────────────────────────────────────────
+enum TierBasis {
+  LIFETIME_POINTS
+  ROLLING_12M_SPEND
+  LIFETIME_SPEND
+}
+
+model Tier {
+  id           String   @id @default(cuid())
+  shop         String
+  name         String                       // Bronze / Silver / Gold
+  rank         Int                          // 0 = lowest
+  threshold    Decimal  @db.Decimal(12, 2)  // in points or dollars depending on Program.tierBasis
+  basis        TierBasis @default(LIFETIME_POINTS)
+  multiplier   Decimal  @default(1) @db.Decimal(6, 3) // 1.25 = 25% more points
+  perks        String?                      // free text shown to customer
+  color        String?                      // hex, for the widget
+  customers    Customer[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([shop, rank])
+  @@unique([shop, name])
+}
+
+// ─── Earning rules (non-order events) ─────────────────────────────────────────
+enum EarnEvent {
+  BIRTHDAY
+  NEWSLETTER
+  SIGNUP
+  REVIEW
+  REFERRAL_REFERRER
+  REFERRAL_FRIEND
+}
+
+model EarnRule {
+  id        String    @id @default(cuid())
+  shop      String
+  event     EarnEvent
+  points    Int
+  active    Boolean   @default(true)
+  updatedAt DateTime  @updatedAt
+
+  @@unique([shop, event])
+}
+
+// ─── Product-level rules (exclude / boost) ────────────────────────────────────
+enum ProductRuleTarget {
+  PRODUCT
+  VARIANT
+  COLLECTION
+  VENDOR
+  TAG
+  PRODUCT_TYPE
+}
+
+enum ProductRuleMode {
+  EXCLUDE
+  MULTIPLIER   // e.g. 2.0 = double points
+  FIXED_BONUS  // extra flat points per unit
+}
+
+model ProductRule {
+  id          String            @id @default(cuid())
+  shop        String
+  target      ProductRuleTarget
+  targetId    String            // gid for PRODUCT/VARIANT/COLLECTION, raw string for VENDOR/TAG/PRODUCT_TYPE
+  targetLabel String            // human-readable, for the admin list
+  mode        ProductRuleMode
+  value       Decimal?          @db.Decimal(10, 3) // multiplier or bonus points; null for EXCLUDE
+  priority    Int               @default(0)        // higher wins among MULTIPLIER/FIXED_BONUS; EXCLUDE always wins
+  active      Boolean           @default(true)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([shop, target, targetId])
+}
+
+// ─── Rewards catalog ──────────────────────────────────────────────────────────
+enum RewardType {
+  FIXED_AMOUNT     // $10 off
+  PERCENTAGE       // 10% off
+  FREE_SHIPPING
+  FREE_PRODUCT     // specific variant free (100% off that line)
+}
+
+model Reward {
+  id               String     @id @default(cuid())
+  shop             String
+  name             String
+  type             RewardType
+  pointsCost       Int
+  value            Decimal?   @db.Decimal(10, 2) // dollars or percent
+  variantId        String?                        // for FREE_PRODUCT
+  minOrderSubtotal Decimal?   @db.Decimal(10, 2)
+  codeValidDays    Int        @default(90)
+  minTierRank      Int?                           // null = any tier
+  active           Boolean    @default(true)
+  sortOrder        Int        @default(0)
+  redemptions      Redemption[]
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  @@index([shop, active])
+}
+
+enum RedemptionStatus {
+  ISSUED
+  USED
+  REVERSED
+  EXPIRED
+}
+
+model Redemption {
+  id               String           @id @default(cuid())
+  shop             String
+  customerId       String
+  customer         Customer         @relation(fields: [customerId], references: [id])
+  rewardId         String
+  reward           Reward           @relation(fields: [rewardId], references: [id])
+  pointsSpent      Int
+  discountCode     String           @unique
+  discountNodeId   String?          // gid://shopify/DiscountCodeNode/…
+  status           RedemptionStatus @default(ISSUED)
+  usedOrderId      String?
+  expiresAt        DateTime
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([shop, customerId])
+  @@index([shop, status, expiresAt])
+}
+
+// ─── Entry pop-up campaigns (wheel / scratch / instant win) ───────────────────
+enum CampaignKind {
+  WHEEL
+  SCRATCH
+  INSTANT
+}
+
+model Campaign {
+  id               String        @id @default(cuid())
+  shop             String
+  name             String
+  kind             CampaignKind
+  headline         String
+  subheadline      String?
+  buttonLabel      String        @default("Spin to win")
+  active           Boolean       @default(false)
+  startsAt         DateTime?
+  endsAt           DateTime?
+  showDelaySeconds Int           @default(5)
+  showOnPages      String        @default("home")   // home | all | collection
+  onePlayPerEmail  Boolean       @default(true)
+  requireEmail     Boolean       @default(true)
+  grantNewsletterPoints Boolean  @default(true)     // email capture counts as newsletter signup
+  primaryColor     String        @default("#c60d11")
+  prizes           CampaignPrize[]
+  plays            CampaignPlay[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([shop, active])
+}
+
+enum PrizeType {
+  PERCENT_OFF
+  AMOUNT_OFF
+  FREE_SHIPPING
+  POINTS
+  NOTHING       // "Better luck next time"
+}
+
+model CampaignPrize {
+  id            String     @id @default(cuid())
+  campaignId    String
+  campaign      Campaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  label         String                     // "10% off"
+  type          PrizeType
+  value         Decimal?   @db.Decimal(10, 2)
+  weight        Int        @default(1)     // relative odds
+  codeValidDays Int        @default(14)
+  minOrderSubtotal Decimal? @db.Decimal(10, 2)
+  color         String?
+  sortOrder     Int        @default(0)
+  plays         CampaignPlay[]
+}
+
+model CampaignPlay {
+  id           String        @id @default(cuid())
+  shop         String
+  campaignId   String
+  campaign     Campaign      @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  prizeId      String
+  prize        CampaignPrize @relation(fields: [prizeId], references: [id])
+  email        String
+  customerId   String?
+  customer     Customer?     @relation(fields: [customerId], references: [id])
+  discountCode String?       @unique
+  ipHash       String?
+  createdAt    DateTime      @default(now())
+
+  @@unique([campaignId, email])
+  @@index([shop, campaignId, createdAt])
+}
+
+// ─── Migration batches (Smile.io import) ──────────────────────────────────────
+model ImportBatch {
+  id           String   @id @default(cuid())
+  shop         String
+  source       String   @default("smile.io")
+  fileName     String
+  rowCount     Int
+  imported     Int      @default(0)
+  skipped      Int      @default(0)
+  totalPoints  Int      @default(0)
+  status       String   @default("PREVIEW") // PREVIEW | COMMITTED | ROLLED_BACK
+  staffEmail   String?
+  createdAt    DateTime @default(now())
+  committedAt  DateTime?
+}
