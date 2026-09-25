@@ -10,6 +10,8 @@ const TYPE_LABEL = { ORDER: "Order", ORDER_REVERSAL: "Refund", REDEEM: "Redeemed
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const fmt = (n) => Number(n || 0).toLocaleString();
 const titleCase = (t) => String(t ?? "").replace(/\b([a-z])/g, (m) => m.toUpperCase());
+const img = (kind, params = {}) => `${BASE}/img/${kind}?${new URLSearchParams(params)}`;
+const Ribbon = ({ t }) => <s-stack alignItems="center"><s-image src={img("ribbon", { t })} alt={t} inlineSize="auto" /></s-stack>;
 const money2 = (n) => "$" + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const money = (n) => "$" + Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
 const date = (s) => new Date(s).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
@@ -18,9 +20,11 @@ function shopFromToken(token) {
   const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
   return String(payload.dest || "").replace(/^https?:\/\//, "");
 }
+let BASE = "";
 async function api(path, body) {
   const token = await shopify.sessionToken.get();
-  const r = await fetch(`${appUrlFor(shopFromToken(token))}/proxy/account/${path}`, {
+  BASE = appUrlFor(shopFromToken(token));
+  const r = await fetch(`${BASE}/proxy/account/${path}`, {
     method: body ? "POST" : "GET",
     headers: { Authorization: `Bearer ${token}`, ...(body ? { "Content-Type": "application/json" } : {}) },
     body: body ? JSON.stringify(body) : undefined,
@@ -46,36 +50,32 @@ function RewardsPage() {
   const worth = (me.balance * Number(program.pointValueCents || 0)) / 100;
 
   return (
-    <s-page heading={program.name}>
+    <s-stack gap="base">
+      <s-image src={img("banner")} alt={program.name} inlineSize="fill" aspectRatio="5.45" borderRadius="large" />
       <s-section>
         <s-stack gap="small" alignItems="center">
           <s-heading>{me.firstName ? `Hi, ${me.firstName}!` : "Your Rewards"}</s-heading>
-          <s-stack direction="inline" gap="small" alignItems="baseline">
-            <s-text size="extra-large" emphasis="bold">{fmt(me.balance)}</s-text>
-            <s-text>{pn}</s-text>
-          </s-stack>
-          {worth > 0 && <s-badge tone="success">Worth {money2(worth)} In Rewards</s-badge>}
+          <s-image src={img("tag", { n: fmt(me.balance), u: pn })} alt={`${fmt(me.balance)} ${pn}`} inlineSize="auto" />
+          {worth > 0 && <s-image src={img("worth", { t: money2(worth) })} alt={`Worth ${money2(worth)} in rewards`} inlineSize="auto" />}
           {me.pending > 0 && <s-text tone="subdued">{fmt(me.pending)} pending</s-text>}
-          {me.tier && <s-badge tone="info">{me.tier.name}{me.tier.multiplier > 1 ? ` · ${me.tier.multiplier}× ${pn}` : ""}</s-badge>}
+          {me.tier && <s-image src={img("label", { t: `${me.tier.name}${me.tier.multiplier > 1 ? ` · ${me.tier.multiplier}× ${titleCase(pn)}` : ""}` })} alt={me.tier.name} inlineSize="auto" />}
+          {me.nextTier ? (
+            <s-stack gap="small" alignItems="center">
+              <s-progress value={me.nextTier.progress} max={100} accessibilityLabel="Progress to next tier" />
+              <s-text>{me.nextTier.basis === "LIFETIME_POINTS" ? `${fmt(me.nextTier.needed)} more ${pn}` : `${money(me.nextTier.needed)} more in purchases`} to reach <s-text emphasis="bold">{me.nextTier.name}</s-text></s-text>
+            </s-stack>
+          ) : me.tier ? <s-text tone="subdued">You're at our top tier.</s-text> : null}
+          {me.tier?.perks && <s-text tone="subdued">{me.tier.perks}</s-text>}
         </s-stack>
-        {me.nextTier ? (
-          <s-stack gap="small">
-            <s-progress value={me.nextTier.progress} max={100} accessibilityLabel="Progress to next tier" />
-            <s-text>{me.nextTier.basis === "LIFETIME_POINTS" ? `${fmt(me.nextTier.needed)} more ${pn}` : `${money(me.nextTier.needed)} more in purchases`} to reach <s-text emphasis="bold">{me.nextTier.name}</s-text></s-text>
-          </s-stack>
-        ) : me.tier ? <s-text tone="subdued">You're at our top tier.</s-text> : null}
-        {me.tier?.perks && <s-text tone="subdued">{me.tier.perks}</s-text>}
       </s-section>
 
-      <s-section>
-        <s-button-group>
-          {tabs.map(([k, label]) => <s-button key={k} variant={tab === k ? "primary" : "secondary"} onClick={() => setTab(k)}>{label}</s-button>)}
-        </s-button-group>
-      </s-section>
+      <s-stack direction="inline" gap="small" justifyContent="center">
+        {tabs.map(([k, label]) => <s-button key={k} variant={tab === k ? "primary" : "secondary"} onClick={() => setTab(k)}>{label}</s-button>)}
+      </s-stack>
 
       {tab === "rewards" && <RedeemTab data={data} onDone={load} />}
       {tab === "offers" && (
-        <s-section heading="Bonus Point Offers">
+        <s-section><Ribbon t="Bonus Point Offers" />
           {offers.length === 0 ? <s-text tone="subdued">No bonus offers right now — check back soon.</s-text> :
             <s-stack gap="base">{offers.map((o, i) => (
               <s-box key={i} padding="base" border="base" borderRadius="base">
@@ -88,7 +88,7 @@ function RewardsPage() {
         </s-section>
       )}
       {tab === "earn" && (
-        <s-section heading="Thread Your Way To More">
+        <s-section><Ribbon t="Thread Your Way To More" />
           <s-stack gap="base">
             <Row left="Shop — every $1 spent" right={`${(program.pointsPerDollar * (me.tier ? me.tier.multiplier : 1)).toFixed(2).replace(/\.?0+$/, "")} ${pn}`} />
             {waysToEarn.map((w) => <Row key={w.event} left={EARN_LABEL[w.event] || w.event} right={`${fmt(w.points)} ${pn}`} />)}
@@ -97,7 +97,7 @@ function RewardsPage() {
         </s-section>
       )}
       {tab === "codes" && (
-        <s-section heading="In Your Sewing Basket">
+        <s-section><Ribbon t="In Your Sewing Basket" />
           {me.codes.length === 0 ? <s-text tone="subdued">Redeem a reward to get a discount code.</s-text> :
             <s-stack gap="base">{me.codes.map((c) => (
               <s-box key={c.code} padding="base" border="base" borderRadius="base">
@@ -109,7 +109,7 @@ function RewardsPage() {
         </s-section>
       )}
       {tab === "history" && (
-        <s-section heading="History">
+        <s-section><Ribbon t="History" />
           {me.history.length === 0 ? <s-text tone="subdued">No activity yet.</s-text> :
             <s-stack gap="small">{me.history.map((h) => (
               <s-box key={h.id} padding="small" border="base" borderRadius="base">
@@ -121,12 +121,12 @@ function RewardsPage() {
           <s-text tone="subdued">Lifetime: {fmt(me.lifetimePoints)} {pn} earned · {money(me.lifetimeSpend)} spent</s-text>
         </s-section>
       )}
-    </s-page>
+    </s-stack>
   );
 }
 
 function Row({ left, right }) {
-  return <s-stack direction="inline" justifyContent="space-between" gap="base"><s-text>{left}</s-text><s-text emphasis="bold">{right}</s-text></s-stack>;
+  return <s-stack direction="inline" justifyContent="space-between" alignItems="center" gap="base"><s-stack direction="inline" gap="small" alignItems="center"><s-image src={img("button")} alt="" inlineSize="auto" accessibilityRole="presentation" /><s-text>{left}</s-text></s-stack><s-text emphasis="bold">{right}</s-text></s-stack>;
 }
 
 function RedeemTab({ data, onDone }) {
@@ -141,7 +141,7 @@ function RedeemTab({ data, onDone }) {
     finally { setBusy(null); }
   };
   return (
-    <s-section heading="Stitch Up Some Savings">
+    <s-section><Ribbon t="Stitch Up Some Savings" />
       {msg && (msg.ok
         ? <s-banner tone="success" heading={`${titleCase(msg.name)} — Your Code Is Ready`}>
             <s-stack direction="inline" gap="base" alignItems="center"><s-text emphasis="bold">{msg.code}</s-text><s-clipboard-item text={msg.code}><s-button variant="secondary">Copy</s-button></s-clipboard-item></s-stack>
@@ -154,8 +154,9 @@ function RedeemTab({ data, onDone }) {
             const locked = r.minTierRank != null && (me.tier ? me.tier.rank : -1) < r.minTierRank;
             const can = !locked && me.balance >= r.pointsCost && me.balance >= program.minRedeemPoints;
             return (
-              <s-box key={r.id} padding="base" border="base" borderRadius="base">
-                <s-stack gap="small">
+              <s-box key={r.id} padding="base" border="base" borderRadius="base" background={can ? "base" : "subdued"}>
+                <s-stack gap="small" alignItems="center">
+                  <s-image src={img("button")} alt="" inlineSize="auto" accessibilityRole="presentation" />
                   <s-text emphasis="bold">{titleCase(r.name)}</s-text>
                   <s-text tone="subdued">{fmt(r.pointsCost)} {pn}{r.minOrderSubtotal ? ` · min order ${money(r.minOrderSubtotal)}` : ""}{locked ? " · higher tier required" : ""}</s-text>
                   <s-button variant="primary" disabled={!can || busy === r.id} loading={busy === r.id} onClick={() => redeem(r)}>{can ? "Redeem" : locked ? "Higher Tier" : `Need ${fmt(r.pointsCost - me.balance)} More`}</s-button>

@@ -4,7 +4,7 @@
 const PRODUCTION = {
   "all-about-sewing-canada.myshopify.com": "https://aas-rewards.vercel.app",
 };
-const DEV_URL = "https://bio-guests-task-scripts.trycloudflare.com";
+const DEV_URL = "https://jam-driven-jenny-figured.trycloudflare.com";
 
 export function appUrlFor(shopDomain) {
   return PRODUCTION[shopDomain] || DEV_URL;
