@@ -7,6 +7,7 @@ import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { useActionToast } from "../lib/rewards/use-toast";
 import { str, num, fmtInt } from "../lib/rewards/format";
+import { Hero, UIStyles, Tabs, EARN_TABS, SETTINGS_TABS } from "../lib/rewards/ui";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -86,7 +87,10 @@ export default function Rewards() {
   };
 
   return (
-    <s-page heading="Rewards" inlineSize="large">
+    <s-page inlineSize="large">
+      <UIStyles />
+      <Hero title="Earn & Redeem" sub={"What members can redeem their points for"} />
+      <Tabs items={EARN_TABS} active="rewards" />
       {result && "error" in result && result.error && <s-banner tone="critical" heading="Not saved">{result.error}</s-banner>}
 
       <s-section heading="Catalog" padding="none">

@@ -6,6 +6,7 @@ import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { useActionToast } from "../lib/rewards/use-toast";
 import { str, num, bool, fmtInt, fmtDate } from "../lib/rewards/format";
+import { Hero, UIStyles, Tabs, EARN_TABS, SETTINGS_TABS } from "../lib/rewards/ui";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -82,7 +83,10 @@ export default function CampaignEditor() {
   const e = editing;
 
   return (
-    <s-page heading={c.name} inlineSize="large">
+    <s-page inlineSize="large">
+      <UIStyles />
+      <Hero title="Earn & Redeem" sub={`Campaign: ${c.name}`} />
+      <Tabs items={EARN_TABS} active="campaigns" />
       {!c.active && <s-banner tone="info" heading="Paused">This campaign isn't showing to customers. Switch it to Live from the Campaigns list when the prizes look right.</s-banner>}
       <s-grid gridTemplateColumns="repeat(auto-fit, minmax(180px, 1fr))" gap="base">
         <Stat label="Plays" value={fmtInt(stats.plays)} />

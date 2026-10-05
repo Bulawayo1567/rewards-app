@@ -54,8 +54,33 @@ export const UI_CSS = `
 .aas-kv{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:4px 0;border-bottom:1px dashed #f0e8dc}
 .aas-kv:last-of-type{border-bottom:0}
 .aas-kv span{color:#666}
+.aas-tabbar{display:flex;gap:4px;flex-wrap:wrap;background:#fff;border:2px dashed #e3d9cc;border-radius:14px;padding:6px;margin:8px 0}
+.aas-tablink{padding:9px 16px;border-radius:10px;font-weight:700;font-size:14px;color:#666;text-decoration:none}
+.aas-tablink:hover{background:#fbe7e8;color:#1f1f1f}
+.aas-tablink.on{background:#c60d11;color:#fff;box-shadow:inset 0 0 0 3px #c60d11,inset 0 0 0 4.5px rgba(255,255,255,.6)}
 .aas-tiercard .ft{display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:2px dashed #eee5d9}
 `;
+
+export type TabItem = { href: string; label: string; key: string };
+
+export const EARN_TABS: TabItem[] = [
+  { key: "earn", href: "/app/earn-rules", label: "Ways to earn" },
+  { key: "rewards", href: "/app/rewards", label: "Rewards" },
+  { key: "rules", href: "/app/product-rules", label: "Product rules" },
+  { key: "campaigns", href: "/app/campaigns", label: "Campaigns" },
+];
+export const SETTINGS_TABS: TabItem[] = [
+  { key: "program", href: "/app/settings", label: "Program" },
+  { key: "import", href: "/app/import", label: "Import" },
+];
+
+export function Tabs({ items, active }: { items: TabItem[]; active: string }) {
+  return (
+    <div className="aas-tabbar">
+      {items.map((t) => <a key={t.key} href={t.href} className={`aas-tablink${t.key === active ? " on" : ""}`}>{t.label}</a>)}
+    </div>
+  );
+}
 
 export function UIStyles() {
   return <style>{UI_CSS}</style>;

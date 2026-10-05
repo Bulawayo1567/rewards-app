@@ -6,6 +6,7 @@ import prisma from "../db.server";
 import { parseCsv, findCol } from "../lib/rewards/csv";
 import { recalcCustomer, syncCustomerMetafields } from "../lib/rewards/customers.server";
 import { fmtDate, fmtInt, str } from "../lib/rewards/format";
+import { Hero, UIStyles, Tabs, EARN_TABS, SETTINGS_TABS } from "../lib/rewards/ui";
 
 interface Row { email: string; points: number; firstName?: string; lastName?: string; smileId?: string }
 
@@ -107,7 +108,10 @@ export default function Import() {
   const p = result && "preview" in result ? result.preview : null;
 
   return (
-    <s-page heading="Import from Smile.io">
+    <s-page inlineSize="large">
+      <UIStyles />
+      <Hero title="Settings" sub={"Bring balances over from Smile.io"} />
+      <Tabs items={SETTINGS_TABS} active="import" />
       {result && "error" in result && result.error && <s-banner tone="critical" heading="Import problem">{result.error}</s-banner>}
       {result && "committed" in result && result.committed && (
         <s-banner tone="success" heading="Import complete">

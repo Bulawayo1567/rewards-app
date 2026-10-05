@@ -5,6 +5,7 @@ import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { useActionToast } from "../lib/rewards/use-toast";
 import { str, fmtInt, fmtDate } from "../lib/rewards/format";
+import { Hero, UIStyles, Tabs, EARN_TABS, SETTINGS_TABS } from "../lib/rewards/ui";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -53,7 +54,10 @@ export default function Campaigns() {
   const { campaigns } = useLoaderData<typeof loader>();
   useActionToast();
   return (
-    <s-page heading="Pop-up campaigns" inlineSize="large">
+    <s-page inlineSize="large">
+      <UIStyles />
+      <Hero title="Earn & Redeem" sub={"Spin-to-win, scratch card and instant-win pop-ups"} />
+      <Tabs items={EARN_TABS} active="campaigns" />
       <s-section padding="none">
         <s-table>
           <s-table-header-row>

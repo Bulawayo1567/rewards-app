@@ -28,15 +28,11 @@ export default function App() {
 
   return (
     <AppProvider embedded apiKey={apiKey}>
-      <s-app-nav>
+             <s-app-nav>
         <s-link href="/app">Dashboard</s-link>
         <s-link href="/app/customers">Members</s-link>
         <s-link href="/app/tiers">Tiers</s-link>
-        <s-link href="/app/earn-rules">Ways to earn</s-link>
-        <s-link href="/app/product-rules">Product rules</s-link>
-        <s-link href="/app/rewards">Rewards</s-link>
-        <s-link href="/app/import">Import</s-link>
-        <s-link href="/app/campaigns">Campaigns</s-link>
+        <s-link href="/app/earn-rules">Earn &amp; Redeem</s-link>
         <s-link href="/app/settings">Settings</s-link>
       </s-app-nav>
       <Outlet />

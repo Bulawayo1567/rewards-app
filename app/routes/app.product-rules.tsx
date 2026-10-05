@@ -7,6 +7,7 @@ import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { useActionToast } from "../lib/rewards/use-toast";
 import { str, num } from "../lib/rewards/format";
+import { Hero, UIStyles, Tabs, EARN_TABS, SETTINGS_TABS } from "../lib/rewards/ui";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -74,7 +75,10 @@ export default function ProductRules() {
   const needsPicker = ["PRODUCT", "VARIANT", "COLLECTION"].includes(target);
 
   return (
-    <s-page heading="Product rules" inlineSize="large">
+    <s-page inlineSize="large">
+      <UIStyles />
+      <Hero title="Earn & Redeem" sub={"Exclude products from earning, or boost them with multipliers and bonuses"} />
+      <Tabs items={EARN_TABS} active="rules" />
       {result && "error" in result && result.error && <s-banner tone="critical" heading="Not saved">{result.error}</s-banner>}
 
       <s-section heading="Rules" padding="none">

@@ -5,6 +5,7 @@ import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { useActionToast } from "../lib/rewards/use-toast";
 import { num, bool } from "../lib/rewards/format";
+import { Hero, UIStyles, Tabs, EARN_TABS, SETTINGS_TABS } from "../lib/rewards/ui";
 
 const EVENTS = [
   { event: "SIGNUP", label: "Create an account", hint: "Awarded once when a customer registers." },
@@ -42,7 +43,10 @@ export default function EarnRules() {
   const { byEvent } = useLoaderData<typeof loader>();
   useActionToast();
   return (
-    <s-page heading="Ways to earn">
+    <s-page inlineSize="large">
+      <UIStyles />
+      <Hero title="Earn & Redeem" sub={"How members earn bonus points beyond purchases"} />
+      <Tabs items={EARN_TABS} active="earn" />
       <Form method="post">
         <s-section heading="Bonus events">
           {EVENTS.map(({ event, label, hint }) => (
