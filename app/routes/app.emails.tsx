@@ -6,7 +6,8 @@ import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { useActionToast } from "../lib/rewards/use-toast";
 import { fmtDate, fmtInt, str, bool } from "../lib/rewards/format";
-import { TEMPLATES, type TemplateKey, audienceFor, buildCtx, renderTemplate, fill, sendTemplateTo, sendEmail } from "../lib/rewards/email.server";
+import { TEMPLATES, type TemplateKey } from "../lib/rewards/email-templates";
+import { audienceFor, buildCtx, renderTemplate, fill, sendTemplateTo, sendEmail } from "../lib/rewards/email.server";
 import { Hero, UIStyles, Tabs, EARN_TABS, Card, Field, Toggle, Empty, Pill } from "../lib/rewards/ui";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
