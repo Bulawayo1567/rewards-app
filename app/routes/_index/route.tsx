@@ -1,6 +1,7 @@
 import type { LoaderFunctionArgs } from "react-router";
 import { redirect, Form, useLoaderData } from "react-router";
 import { login } from "../../shopify.server";
+import { ICON } from "../../lib/rewards/ui";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
@@ -21,7 +22,7 @@ export default function App() {
     }}>
       <div style={{ position: "relative", width: "100%", maxWidth: 440, background: "#fff", borderRadius: 20, padding: "40px 36px 32px", boxShadow: "0 24px 60px rgba(0,0,0,.18)", textAlign: "center" }}>
         <div style={{ position: "absolute", inset: 12, border: `2px dashed ${RED}`, borderRadius: 14, opacity: .45, pointerEvents: "none" }} />
-        <img src="/img/icon" alt="" width={96} height={96} style={{ display: "block", margin: "0 auto 14px", borderRadius: 22 }} />
+        <img src={ICON} alt="" width={96} height={96} style={{ display: "block", margin: "0 auto 14px", borderRadius: 22 }} />
         <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, letterSpacing: "-.01em" }}>All About Sewing Rewards</h1>
         <p style={{ margin: "8px 0 24px", color: "#555", fontSize: 15, lineHeight: 1.5 }}>
           Points, tiers and rewards for All About Sewing customers. Sign in with your store to open the app.
