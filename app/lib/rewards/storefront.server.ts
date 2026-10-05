@@ -59,7 +59,6 @@ export async function buildMePayload(shop: string, customerId: string | null, op
 
   const base = {
     program: { name: program.name, pointsName: program.pointsName, pointsPerDollar: Number(program.pointsPerDollar), minRedeemPoints: program.minRedeemPoints, pointValueCents: Number(program.pointValueCents ?? 1) },
-
     tiers: tiers.map((t) => ({ name: t.name, rank: t.rank, threshold: Number(t.threshold), basis: t.basis, multiplier: Number(t.multiplier), perks: t.perks, color: t.color })),
     waysToEarn: earn.map((e) => ({ event: e.event, points: e.points })),
     rewards: rewards.map((r) => ({ id: r.id, name: r.name, type: r.type, pointsCost: r.pointsCost, minTierRank: r.minTierRank, minOrderSubtotal: r.minOrderSubtotal == null ? null : Number(r.minOrderSubtotal) })),
@@ -90,6 +89,7 @@ export async function buildMePayload(shop: string, customerId: string | null, op
       tier: c.tier ? { name: c.tier.name, rank: c.tier.rank, perks: c.tier.perks, color: c.tier.color, multiplier: Number(c.tier.multiplier) } : null,
       nextTier: next ? { name: next.name, needed: Math.max(0, Number(next.threshold) - measure), basis: next.basis, progress } : null,
       birthday: c.birthday ? { month: new Date(c.birthday).getUTCMonth() + 1, day: new Date(c.birthday).getUTCDate() } : null,
+      signupAwarded: c.signupAwarded, newsletterAwarded: c.newsletterAwarded,
       codes: c.redemptions.map((r) => ({ code: r.discountCode, name: r.reward.name, status: r.status, expiresAt: r.expiresAt.toISOString() })),
       history: opts.history && "ledger" in c ? (c as any).ledger.map((l: any) => ({ id: l.id, type: l.type, status: l.status, points: l.points, note: l.note, orderName: l.orderName, createdAt: l.createdAt.toISOString() })) : [],
     },
