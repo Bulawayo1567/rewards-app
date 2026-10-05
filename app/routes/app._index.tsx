@@ -6,6 +6,8 @@ import prisma from "../db.server";
 import { getProgram } from "../lib/rewards/program.server";
 import { fmtDate, fmtInt, fmtMoney } from "../lib/rewards/format";
 
+const fmtMoney0 = (n: number) => new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 }).format(n);
+
 const ICON = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%221200%22%20height%3D%221200%22%20viewBox%3D%220%200%201200%201200%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3CradialGradient%20id%3D%22cush%22%20cx%3D%2240%25%22%20cy%3D%2235%25%22%20r%3D%2270%25%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23e8393c%22%2F%3E%3Cstop%20offset%3D%22.7%22%20stop-color%3D%22%23c60d11%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%238f0a0d%22%2F%3E%3C%2FradialGradient%3E%0A%20%20%20%20%3Cpattern%20id%3D%22g%22%20width%3D%2270%22%20height%3D%2270%22%20patternUnits%3D%22userSpaceOnUse%22%3E%3Crect%20width%3D%2270%22%20height%3D%2270%22%20fill%3D%22%23f4eee4%22%2F%3E%3Crect%20width%3D%2235%22%20height%3D%2270%22%20fill%3D%22rgba%28198%2C13%2C17%2C.13%29%22%2F%3E%3Crect%20width%3D%2270%22%20height%3D%2235%22%20fill%3D%22rgba%28198%2C13%2C17%2C.13%29%22%2F%3E%3C%2Fpattern%3E%0A%20%20%3C%2Fdefs%3E%0A%20%20%3Crect%20width%3D%221200%22%20height%3D%221200%22%20rx%3D%22220%22%20fill%3D%22url%28%23g%29%22%2F%3E%0A%20%20%3Crect%20x%3D%2260%22%20y%3D%2260%22%20width%3D%221080%22%20height%3D%221080%22%20rx%3D%22180%22%20fill%3D%22none%22%20stroke%3D%22rgba%2831%2C31%2C31%2C.3%29%22%20stroke-width%3D%2212%22%20stroke-dasharray%3D%2236%2028%22%2F%3E%0A%20%20%3Cg%20transform%3D%22translate%28120%20160%29%20scale%284%29%22%3E%0A%20%20%20%20%3Cellipse%20cx%3D%22120%22%20cy%3D%22200%22%20rx%3D%2286%22%20ry%3D%2212%22%20fill%3D%22rgba%280%2C0%2C0%2C.14%29%22%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D%22120%22%20cy%3D%22130%22%20rx%3D%2295%22%20ry%3D%2274%22%20fill%3D%22url%28%23cush%29%22%2F%3E%0A%20%20%20%20%3Cpath%20d%3D%22M120%2060%20C%2070%2070%2C%2045%20110%2C%2040%20150%20M120%2060%20C%20170%2070%2C%20195%20110%2C%20200%20150%20M120%2060%20C%20100%20100%2C%20100%20150%2C%20110%20200%20M120%2060%20C%20140%20100%2C%20140%20150%2C%20130%20200%22%20fill%3D%22none%22%20stroke%3D%22rgba%28255%2C255%2C255%2C.55%29%22%20stroke-width%3D%222.5%22%20stroke-dasharray%3D%227%206%22%20stroke-linecap%3D%22round%22%2F%3E%0A%20%20%20%20%3Cpath%20d%3D%22M120%2058%20c-6-14%206-22%2010-8%20c8-14%2020-6%208%206%20c14-2%2016%2012%200%2012%20c10%2012-6%2020-12%206%20c-8%2014-22%206-10-8%20c-14%202-16-12%200-12z%22%20fill%3D%22%233f8f4a%22%2F%3E%0A%20%20%20%20%3Cellipse%20cx%3D%22120%22%20cy%3D%2264%22%20rx%3D%227%22%20ry%3D%224%22%20fill%3D%22%232f6e38%22%2F%3E%0A%20%20%20%20%3Cg%20stroke-linecap%3D%22round%22%3E%0A%20%20%20%20%20%20%3Cline%20x1%3D%2280%22%20y1%3D%22120%22%20x2%3D%2260%22%20y2%3D%2252%22%20stroke%3D%22%239a9a9a%22%20stroke-width%3D%223%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%2248%22%20r%3D%228%22%20fill%3D%22%231f1f1f%22%2F%3E%0A%20%20%20%20%20%20%3Cline%20x1%3D%22150%22%20y1%3D%22112%22%20x2%3D%22178%22%20y2%3D%2248%22%20stroke%3D%22%239a9a9a%22%20stroke-width%3D%223%22%2F%3E%3Ccircle%20cx%3D%22180%22%20cy%3D%2244%22%20r%3D%228%22%20fill%3D%22%23efe8dd%22%20stroke%3D%22%231f1f1f%22%20stroke-width%3D%221.5%22%2F%3E%0A%20%20%20%20%20%20%3Cline%20x1%3D%22105%22%20y1%3D%22108%22%20x2%3D%2298%22%20y2%3D%2240%22%20stroke%3D%22%239a9a9a%22%20stroke-width%3D%223%22%2F%3E%3Ccircle%20cx%3D%2297%22%20cy%3D%2236%22%20r%3D%228%22%20fill%3D%22%23c60d11%22%20stroke%3D%22%23fff%22%20stroke-width%3D%221.5%22%2F%3E%0A%20%20%20%20%20%20%3Cline%20x1%3D%22160%22%20y1%3D%22140%22%20x2%3D%22205%22%20y2%3D%22105%22%20stroke%3D%22%239a9a9a%22%20stroke-width%3D%223%22%2F%3E%3Ccircle%20cx%3D%22210%22%20cy%3D%22102%22%20r%3D%228%22%20fill%3D%22%231f1f1f%22%2F%3E%0A%20%20%20%20%3C%2Fg%3E%0A%20%20%3C%2Fg%3E%0A%3C%2Fsvg%3E%0A";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -163,7 +165,7 @@ export default function Dashboard() {
           <img src={ICON} alt="" width={64} height={64} style={{ borderRadius: 14, boxShadow: "0 4px 12px rgba(0,0,0,.15)" }} />
           <div style={{ flex: 1, minWidth: 220 }}>
             <div style={{ fontSize: 22, fontWeight: 800, color: "#1f1f1f", letterSpacing: "-.01em" }}>{program.name}</div>
-            <div style={{ fontSize: 13, color: "#444", marginTop: 2 }}>{fmtInt(kpis.members)} members · {fmtInt(kpis.outstanding)} {program.pointsName} outstanding · {fmtMoney(kpis.liability)} liability</div>
+            <div style={{ fontSize: 13, color: "#444", marginTop: 2 }}>{fmtInt(kpis.members)} members · {fmtInt(kpis.outstanding)} {program.pointsName} outstanding · {fmtMoney0(kpis.liability)} liability</div>
           </div>
           <span style={{ padding: "6px 14px", borderRadius: 999, fontSize: 12, fontWeight: 800, letterSpacing: ".04em", background: program.active ? "#c60d11" : "#fff", color: program.active ? "#fff" : "#c60d11", border: "2px dashed " + (program.active ? "rgba(255,255,255,.6)" : "#c60d11") }}>
             {program.active ? "LIVE" : "PAUSED"}
@@ -180,19 +182,24 @@ export default function Dashboard() {
 .aas-find{display:flex;align-items:center;gap:8px;flex:1 1 320px;max-width:460px}
 .aas-find s-text-field{flex:1}
 .aas-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.aas-cols3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:stretch;margin:6px 0}
-.aas-cols3>s-section{height:100%}
-@media (max-width:760px){.aas-cols3{grid-template-columns:1fr}}
+.aas-cols4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:14px;padding-top:14px;border-top:2px dashed #eee5d9}
+.aas-col{padding:2px 16px;border-left:2px dashed #eee5d9;min-width:0;font-size:13px}
+.aas-cols4>.aas-col:first-child{border-left:0;padding-left:2px}
+@media (max-width:760px){.aas-cols4{grid-template-columns:1fr 1fr;row-gap:16px}.aas-col{border-left:0;padding:2px 6px}}
+.aas-h{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#8a8a8a;margin-bottom:10px}
+.aas-muted{color:#8a8a8a}
+.aas-legend{display:flex;gap:12px;font-size:11px;color:#666;margin-top:4px}.aas-legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px;vertical-align:middle}
+.aas-row.tight{border-bottom:0;padding:2px 0 4px}
 .aas-panel{background:#fff;border:2px dashed #e3d9cc;border-radius:16px;padding:16px 18px;margin:8px 0}
 .aas-panel .aas-kpis{margin:14px 0 0;padding-top:14px;border-top:2px dashed #eee5d9;gap:0}
 .aas-stat{position:relative;padding:4px 16px;min-width:0;border-left:2px dashed #eee5d9}
 .aas-panel .aas-kpis>.aas-stat:first-child{border-left:0;padding-left:2px}
 @media (max-width:760px){.aas-stat{border-left:0;padding:8px 6px}}
 .aas-stat .l{font-size:12px;color:#8a8a8a;font-weight:600;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.aas-stat .v{font-size:26px;font-weight:800;color:#1f1f1f;line-height:1.15;margin-top:6px;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.aas-stat .v{font-size:22px;font-weight:800;color:#1f1f1f;line-height:1.15;margin-top:6px;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .aas-stat.hot .v{color:#c60d11}
 .aas-stat .s{font-size:12px;color:#666;margin-top:4px;line-height:1.35}
-.aas-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-bottom:1px dashed #e3d9cc}
+.aas-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed #eee5d9}.aas-row span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .aas-row:last-of-type{border-bottom:0}`}</style>
       <div className="aas-tiles">
         {tiles.map((t) => (
@@ -232,61 +239,66 @@ export default function Dashboard() {
         </div>
         <div className="aas-kpis">
           <Stat label="Members" value={fmtInt(kpis.members)} sub={`+${fmtInt(kpis.newMembers)} in ${range}d`} />
-          <Stat hot label="Points liability" value={fmtMoney(kpis.liability)} sub={`${fmtInt(kpis.outstanding)} ${program.pointsName}${kpis.pending ? ` · ${fmtInt(kpis.pending)} pending` : ""}`} />
+          <Stat hot label="Points liability" value={fmtMoney0(kpis.liability)} sub={`${fmtInt(kpis.outstanding)} ${program.pointsName}${kpis.pending ? ` · ${fmtInt(kpis.pending)} pending` : ""}`} />
           <Stat hot label={`Awarded (${range}d)`} value={fmtInt(kpis.awarded)} sub={`${fmtInt(kpis.orders)} orders`} />
           <Stat label={`Redeemed (${range}d)`} value={fmtInt(kpis.redeemed)} sub={`${fmtInt(kpis.redemptions)} redemptions · ${kpis.redemptionRate}% of orders`} />
           <Stat label="Code use" value={`${kpis.codeUseRate}%`} sub={`${fmtInt(kpis.codesUsed)} of ${fmtInt(kpis.codesIssued)} used · ${fmtInt(kpis.activeCodes)} active`} />
           <Stat label={`Pop-up (${range}d)`} value={fmtInt(kpis.plays)} sub={`${fmtInt(kpis.playsWithCode)} won codes · ${fmtInt(kpis.playCodesUsed)} ordered`} />
         </div>
-      </div>
+        <div className="aas-cols4">
+          {/* Chart (compact) */}
+          <div className="aas-col">
+            <div className="aas-h">Awarded vs redeemed · {range}d</div>
+            <svg viewBox="0 0 320 140" width="100%" style={{ display: "block" }} role="img" aria-label="Points awarded and redeemed over time">
+              {days.map((d, i) => {
+                const slot = 300 / days.length, x = 10 + i * slot, w = Math.max(1.5, slot * 0.38);
+                const ah = (d.awarded / maxDay) * 110, rh = (d.redeemed / maxDay) * 110;
+                return (
+                  <g key={i}>
+                    <rect x={x} y={118 - ah} width={w} height={ah} fill="#c60d11" rx="1"><title>{d.label}: +{fmtInt(d.awarded)}</title></rect>
+                    <rect x={x + w} y={118 - rh} width={w} height={rh} fill="#1f1f1f" rx="1"><title>{d.label}: −{fmtInt(d.redeemed)}</title></rect>
+                  </g>
+                );
+              })}
+              <line x1="8" y1="118" x2="312" y2="118" stroke="#ddd" />
+              <text x="10" y="134" fontSize="10" fill="#888">{days[0]?.label}</text>
+              <text x="310" y="134" fontSize="10" fill="#888" textAnchor="end">{days[days.length - 1]?.label}</text>
+            </svg>
+            <div className="aas-legend"><span><i style={{ background: "#c60d11" }} />Awarded</span><span><i style={{ background: "#1f1f1f" }} />Redeemed</span></div>
+          </div>
 
-      {/* Chart */}
-      <s-section heading={`${program.pointsName} awarded vs redeemed — last ${range} days`}>
-        <svg viewBox="0 0 900 220" width="100%" style={{ display: "block" }} role="img" aria-label="Points awarded and redeemed over time">
-          {days.map((d, i) => {
-            const x = 20 + i * (barW + 4), ah = (d.awarded / maxDay) * 170, rh = (d.redeemed / maxDay) * 170, half = Math.max(3, Math.floor(barW / 2));
-            return (
-              <g key={i}>
-                <rect x={x} y={190 - ah} width={half} height={ah} fill="#c60d11" rx="1.5"><title>{d.label}: +{fmtInt(d.awarded)}</title></rect>
-                <rect x={x + half} y={190 - rh} width={half} height={rh} fill="#1f1f1f" rx="1.5"><title>{d.label}: −{fmtInt(d.redeemed)}</title></rect>
-                {i % Math.ceil(days.length / 8) === 0 && <text x={x + half} y={210} fontSize="10" textAnchor="middle" fill="#666">{d.label}</text>}
-              </g>
-            );
-          })}
-          <line x1="20" y1="190" x2="890" y2="190" stroke="#ddd" />
-        </svg>
-        <s-stack direction="inline" gap="base"><s-badge tone="critical">Awarded</s-badge><s-badge>Redeemed</s-badge></s-stack>
-      </s-section>
+          {/* Tiers */}
+          <div className="aas-col">
+            <div className="aas-h">Members &amp; liability by tier</div>
+            {tierMix.map((t) => (
+              <div key={t.id ?? "none"} style={{ marginBottom: 8 }}>
+                <div className="aas-row tight"><span>{t.name}</span><b>{fmtInt(t.count)} · {fmtMoney0(t.liability)}</b></div>
+                <div style={{ height: 6, background: "#eee", borderRadius: 3 }}><div style={{ width: `${(t.count / maxTier) * 100}%`, height: "100%", background: "#c60d11", borderRadius: 3 }} /></div>
+              </div>
+            ))}
+            <s-link href="/app/tiers">Manage tiers</s-link>
+          </div>
 
-      <div className="aas-cols3">
-        {/* Tier mix + liability */}
-        <s-section heading="Members & liability by tier">
-          {tierMix.map((t) => (
-            <s-stack key={t.id ?? "none"} gap="none">
-              <s-stack direction="inline" justifyContent="space-between"><s-text>{t.name}</s-text><s-text emphasis="bold">{fmtInt(t.count)} · {fmtMoney(t.liability)}</s-text></s-stack>
-              <div style={{ height: 8, background: "#eee", borderRadius: 4, margin: "4px 0 10px" }}><div style={{ width: `${(t.count / maxTier) * 100}%`, height: "100%", background: "#c60d11", borderRadius: 4 }} /></div>
-            </s-stack>
-          ))}
-          <s-link href="/app/tiers">Manage tiers</s-link>
-        </s-section>
+          {/* Rewards */}
+          <div className="aas-col">
+            <div className="aas-h">Rewards · 90d</div>
+            {topRewards.length === 0 ? <div className="aas-muted">No redemptions yet.</div> : topRewards.map((r) => (
+              <div key={r.name} className="aas-row"><span>{r.name}</span><b>{fmtInt(r.count)}</b></div>
+            ))}
+            <div style={{ marginTop: 8 }}><s-link href="/app/rewards">Manage rewards</s-link> · <s-link href="/app/product-rules">Product rules</s-link></div>
+          </div>
 
-        {/* Rewards performance */}
-        <s-section heading="Rewards (90d)">
-          {topRewards.length === 0 ? <s-paragraph><s-text color="subdued">No redemptions yet.</s-text></s-paragraph> : topRewards.map((r) => (
-            <div key={r.name} className="aas-row"><s-text>{r.name}</s-text><s-text emphasis="bold">{fmtInt(r.count)}</s-text></div>
-          ))}
-          <s-paragraph><s-link href="/app/rewards">Manage rewards</s-link> · <s-link href="/app/product-rules">Product rules</s-link></s-paragraph>
-        </s-section>
-
-        {/* Segments */}
-        <s-section heading="Segments">
-          {segments.map((x) => (
-            <div key={x.key} className="aas-row">
-              <s-link href={`/app/customers?segment=${x.key}`}>{x.label}</s-link>
-              <s-text emphasis="bold">{fmtInt(x.count)}</s-text>
-            </div>
-          ))}
-        </s-section>
+          {/* Segments */}
+          <div className="aas-col">
+            <div className="aas-h">Segments</div>
+            {segments.map((x) => (
+              <div key={x.key} className="aas-row">
+                <s-link href={`/app/customers?segment=${x.key}`}>{x.label}</s-link>
+                <b>{fmtInt(x.count)}</b>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Attention */}
