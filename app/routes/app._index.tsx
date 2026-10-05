@@ -164,7 +164,7 @@ export default function Dashboard() {
         <div style={{ position: "absolute", inset: 10, border: "2px dashed rgba(31,31,31,.3)", borderRadius: 10, pointerEvents: "none" }} />
         <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
           <img src={ICON} alt="" width={64} height={64} style={{ borderRadius: 14, boxShadow: "0 4px 12px rgba(0,0,0,.15)" }} />
-          <div style={{ flex: 1, minWidth: 220 }}>
+          <div style={{ flex: 1, minWidth: 220, background: "#fbe7e8", border: "1.5px dashed rgba(198,13,17,.45)", borderRadius: 12, padding: "10px 16px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" }}>
             <div style={{ fontSize: 22, fontWeight: 800, color: "#1f1f1f", letterSpacing: "-.01em" }}>{program.name}</div>
             <div style={{ fontSize: 13, color: "#444", marginTop: 2 }}>{fmtInt(kpis.members)} members · {fmtInt(kpis.outstanding)} {program.pointsName} outstanding · {fmtMoney0(kpis.liability)} liability</div>
           </div>
