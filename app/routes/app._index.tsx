@@ -22,7 +22,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     members, newMembers, outstanding, pendingPts, awarded, redeemed, redemptions, orders,
     codesIssued, codesUsed, activeCodes, expiringCodes, plays, playsWithCode, playCodesUsed, liveCampaign,
     tiers, tierAgg, rewardsCount, earnRulesCount, topRewards, negative, recent, daily,
-    segTop, segDormant, segPending, segNegative, segNoAccount, migratedCount,
+    segTop, segDormant, segPending, segNegative, segNoAccount, migratedCount, ruleCount, campaignCount,
   ] = await Promise.all([
     prisma.customer.count({ where: { shop } }),
     prisma.customer.count({ where: { shop, createdAt: { gte: since } } }),
@@ -54,6 +54,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     prisma.customer.count({ where: { shop, balance: { lt: 0 } } }),
     prisma.customer.count({ where: { shop, shopifyId: null } }),
     prisma.importBatch.count({ where: { shop, status: "COMMITTED" } }),
+    prisma.productRule.count({ where: { shop, active: true } }),
+    prisma.campaign.count({ where: { shop } }),
   ]);
 
   const rewardNames = await prisma.reward.findMany({ where: { id: { in: topRewards.map((r) => r.rewardId) } }, select: { id: true, name: true } });
@@ -95,8 +97,19 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     { ok: !!liveCampaign, label: "Launch a pop-up campaign", href: "/app/campaigns" },
   ];
 
+  const tiles = [
+    { href: "/app/customers", icon: "🧵", label: "Members", sub: `${fmtInt(members)} total` },
+    { href: "/app/tiers", icon: "🏷️", label: "Tiers", sub: tiers.length ? tiers.map((t) => t.name).join(" · ") : "none yet" },
+    { href: "/app/earn-rules", icon: "🪡", label: "Ways to earn", sub: `${earnRulesCount} bonus rules` },
+    { href: "/app/product-rules", icon: "📏", label: "Product rules", sub: `${ruleCount} active` },
+    { href: "/app/rewards", icon: "🎁", label: "Rewards", sub: `${rewardsCount} active` },
+    { href: "/app/campaigns", icon: "🎡", label: "Campaigns", sub: liveCampaign ? `live: ${liveCampaign.name}` : `${campaignCount} saved` },
+    { href: "/app/import", icon: "📥", label: "Import", sub: migratedCount ? `${migratedCount} batch${migratedCount > 1 ? "es" : ""} done` : "Smile.io" },
+    { href: "/app/settings", icon: "⚙️", label: "Settings", sub: `${program.pointsPerDollar} pt/$ · ${Number(program.pointValueCents ?? 1)}¢/pt` },
+  ];
+
   return {
-    range,
+    range, tiles,
     program: { name: program.name, active: program.active, pointsName: program.pointsName, pointValue },
     liveCampaign,
     checklist,
@@ -127,7 +140,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export default function Dashboard() {
-  const { range, program, liveCampaign, checklist, kpis, days, tierMix, segments, topRewards, attention, recent } = useLoaderData<typeof loader>();
+  const { range, tiles, program, liveCampaign, checklist, kpis, days, tierMix, segments, topRewards, attention, recent } = useLoaderData<typeof loader>();
   const maxDay = Math.max(1, ...days.map((d) => Math.max(d.awarded, d.redeemed)));
   const maxTier = Math.max(1, ...tierMix.map((t) => t.count));
   const attnCount = attention.expiring.length + attention.negative.length + attention.nearTier.length;
@@ -135,7 +148,38 @@ export default function Dashboard() {
   const barW = Math.max(6, Math.floor(860 / days.length) - 4);
 
   return (
-    <s-page heading={program.name} inlineSize="large">
+    <s-page inlineSize="large">
+      {/* Hero band */}
+      <div style={{
+        position: "relative", borderRadius: 16, padding: "22px 26px", marginBottom: 4, overflow: "hidden",
+        backgroundColor: "#f4eee4",
+        backgroundImage: "repeating-linear-gradient(0deg, rgba(198,13,17,.13) 0 14px, transparent 14px 28px), repeating-linear-gradient(90deg, rgba(198,13,17,.13) 0 14px, transparent 14px 28px), repeating-linear-gradient(0deg, rgba(255,255,255,.5) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(255,255,255,.5) 0 1px, transparent 1px 3px)",
+      }}>
+        <div style={{ position: "absolute", inset: 10, border: "2px dashed rgba(31,31,31,.3)", borderRadius: 10, pointerEvents: "none" }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
+          <img src="/img/icon" alt="" width={64} height={64} style={{ borderRadius: 14, boxShadow: "0 4px 12px rgba(0,0,0,.15)" }} />
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "#1f1f1f", letterSpacing: "-.01em" }}>{program.name}</div>
+            <div style={{ fontSize: 13, color: "#444", marginTop: 2 }}>{fmtInt(kpis.members)} members · {fmtInt(kpis.outstanding)} {program.pointsName} outstanding · {fmtMoney(kpis.liability)} liability</div>
+          </div>
+          <span style={{ padding: "6px 14px", borderRadius: 999, fontSize: 12, fontWeight: 800, letterSpacing: ".04em", background: program.active ? "#c60d11" : "#fff", color: program.active ? "#fff" : "#c60d11", border: "2px dashed " + (program.active ? "rgba(255,255,255,.6)" : "#c60d11") }}>
+            {program.active ? "LIVE" : "PAUSED"}
+          </span>
+        </div>
+      </div>
+
+      {/* Nav tiles */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10, marginBottom: 6 }}>
+        {tiles.map((t) => (
+          <a key={t.href} href={t.href} style={{ textDecoration: "none", color: "#1f1f1f", background: "#fff", border: "2px dashed #e3d9cc", borderRadius: 12, padding: "12px 12px 10px", display: "block", transition: "border-color .15s" }}
+             onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#c60d11")} onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#e3d9cc")}>
+            <div style={{ fontSize: 22, lineHeight: 1 }}>{t.icon}</div>
+            <div style={{ fontWeight: 700, fontSize: 14, marginTop: 8 }}>{t.label}</div>
+            <div style={{ fontSize: 12, color: "#8a8a8a", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.sub}</div>
+          </a>
+        ))}
+      </div>
+
       {/* Setup checklist / health */}
       {todo.length > 0 ? (
         <s-banner tone="warning" heading={`Setup: ${checklist.length - todo.length} of ${checklist.length} done`}>
