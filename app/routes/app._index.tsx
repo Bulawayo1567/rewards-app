@@ -172,9 +172,9 @@ export default function Dashboard() {
       </div>
 
       {/* Nav tiles */}
-      <style>{`.aas-tiles{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px;margin-bottom:6px}@media (max-width:1000px){.aas-tiles{grid-template-columns:repeat(4,minmax(0,1fr))}}@media (max-width:520px){.aas-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+      <style>{`.aas-tiles{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px;margin-bottom:6px}@media (max-width:760px){.aas-tiles{grid-template-columns:repeat(4,minmax(0,1fr))}}@media (max-width:520px){.aas-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .aas-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:6px 0}
-@media (max-width:1100px){.aas-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:760px){.aas-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:560px){.aas-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .aas-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .aas-find{display:flex;align-items:center;gap:8px;flex:1 1 320px;max-width:460px}
@@ -182,7 +182,16 @@ export default function Dashboard() {
 .aas-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .aas-cols3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:stretch;margin:6px 0}
 .aas-cols3>s-section{height:100%}
-@media (max-width:1000px){.aas-cols3{grid-template-columns:1fr}}
+@media (max-width:760px){.aas-cols3{grid-template-columns:1fr}}
+.aas-panel{background:#fff;border:2px dashed #e3d9cc;border-radius:16px;padding:16px 18px;margin:8px 0}
+.aas-panel .aas-kpis{margin:14px 0 0;padding-top:14px;border-top:2px dashed #eee5d9;gap:0}
+.aas-stat{position:relative;padding:4px 16px;min-width:0;border-left:2px dashed #eee5d9}
+.aas-panel .aas-kpis>.aas-stat:first-child{border-left:0;padding-left:2px}
+@media (max-width:760px){.aas-stat{border-left:0;padding:8px 6px}}
+.aas-stat .l{font-size:12px;color:#8a8a8a;font-weight:600;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.aas-stat .v{font-size:26px;font-weight:800;color:#1f1f1f;line-height:1.15;margin-top:6px;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.aas-stat.hot .v{color:#c60d11}
+.aas-stat .s{font-size:12px;color:#666;margin-top:4px;line-height:1.35}
 .aas-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-bottom:1px dashed #e3d9cc}
 .aas-row:last-of-type{border-bottom:0}`}</style>
       <div className="aas-tiles">
@@ -207,8 +216,8 @@ export default function Dashboard() {
         <s-banner tone="success" heading="Program is live">{liveCampaign ? `Pop-up live: ${liveCampaign.name}` : "No pop-up campaign is live"}</s-banner>
       )}
 
-      {/* Lookup + actions + period — one row */}
-      <s-section>
+      {/* Command panel: lookup + actions + stats in one */}
+      <div className="aas-panel">
         <div className="aas-bar">
           <Form method="get" action="/app/customers" className="aas-find">
             <s-text-field name="q" label="Find a member" labelAccessibilityVisibility="exclusive" placeholder="Find a member — email or name" />
@@ -221,16 +230,14 @@ export default function Dashboard() {
             <s-button href="/app/export/ledger" target="_top">Export ledger</s-button>
           </div>
         </div>
-      </s-section>
-
-      {/* KPIs */}
-      <div className="aas-kpis">
-        <Stat label="Members" value={fmtInt(kpis.members)} sub={`+${fmtInt(kpis.newMembers)} in ${range}d`} />
-        <Stat label="Points liability" value={fmtMoney(kpis.liability)} sub={`${fmtInt(kpis.outstanding)} ${program.pointsName}${kpis.pending ? ` · ${fmtInt(kpis.pending)} pending` : ""}`} />
-        <Stat label={`Awarded (${range}d)`} value={fmtInt(kpis.awarded)} sub={`${fmtInt(kpis.orders)} orders`} />
-        <Stat label={`Redeemed (${range}d)`} value={fmtInt(kpis.redeemed)} sub={`${fmtInt(kpis.redemptions)} redemptions · ${kpis.redemptionRate}% of orders`} />
-        <Stat label="Code use" value={`${kpis.codeUseRate}%`} sub={`${fmtInt(kpis.codesUsed)} of ${fmtInt(kpis.codesIssued)} used · ${fmtInt(kpis.activeCodes)} active`} />
-        <Stat label={`Pop-up (${range}d)`} value={fmtInt(kpis.plays)} sub={`${fmtInt(kpis.playsWithCode)} won codes · ${fmtInt(kpis.playCodesUsed)} ordered`} />
+        <div className="aas-kpis">
+          <Stat label="Members" value={fmtInt(kpis.members)} sub={`+${fmtInt(kpis.newMembers)} in ${range}d`} />
+          <Stat hot label="Points liability" value={fmtMoney(kpis.liability)} sub={`${fmtInt(kpis.outstanding)} ${program.pointsName}${kpis.pending ? ` · ${fmtInt(kpis.pending)} pending` : ""}`} />
+          <Stat hot label={`Awarded (${range}d)`} value={fmtInt(kpis.awarded)} sub={`${fmtInt(kpis.orders)} orders`} />
+          <Stat label={`Redeemed (${range}d)`} value={fmtInt(kpis.redeemed)} sub={`${fmtInt(kpis.redemptions)} redemptions · ${kpis.redemptionRate}% of orders`} />
+          <Stat label="Code use" value={`${kpis.codeUseRate}%`} sub={`${fmtInt(kpis.codesUsed)} of ${fmtInt(kpis.codesIssued)} used · ${fmtInt(kpis.activeCodes)} active`} />
+          <Stat label={`Pop-up (${range}d)`} value={fmtInt(kpis.plays)} sub={`${fmtInt(kpis.playsWithCode)} won codes · ${fmtInt(kpis.playCodesUsed)} ordered`} />
+        </div>
       </div>
 
       {/* Chart */}
@@ -339,13 +346,13 @@ export default function Dashboard() {
   );
 }
 
-function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function Stat({ label, value, sub, hot }: { label: string; value: string; sub?: string; hot?: boolean }) {
   return (
-    <s-box padding="base" background="subdued" border="base" borderRadius="base">
-      <s-text color="subdued">{label}</s-text>
-      <s-heading>{value}</s-heading>
-      {sub && <s-text color="subdued">{sub}</s-text>}
-    </s-box>
+    <div className={`aas-stat${hot ? " hot" : ""}`}>
+      <div className="l">{label}</div>
+      <div className="v">{value}</div>
+      {sub && <div className="s">{sub}</div>}
+    </div>
   );
 }
 
