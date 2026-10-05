@@ -5,7 +5,8 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { useActionToast } from "../lib/rewards/use-toast";
-import { str, num } from "../lib/rewards/format";
+import { str, num, fmtInt } from "../lib/rewards/format";
+import { Hero, UIStyles } from "../lib/rewards/ui";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -82,68 +83,62 @@ export default function Tiers() {
   const [editing, setEditing] = useState<(typeof tiers)[number] | null>(null);
   const e = editing;
   useEffect(() => { if (result && "ok" in result && result.ok) setEditing(null); }, [result]);
+  const nextRank = tiers.length ? Math.max(...tiers.map((t) => t.rank)) + 1 : 0;
+  const totalMembers = tiers.reduce((n, t) => n + t.members, 0);
 
   return (
-    <s-page heading="Tiers" inlineSize="large">
+    <s-page inlineSize="large">
+      <UIStyles />
+      <Hero
+        title="Tiers"
+        sub={<>{tiers.length} tier{tiers.length === 1 ? "" : "s"} · {fmtInt(totalMembers)} members placed</>}
+        right={
+          <Form method="post" onSubmit={(ev) => { if (!confirm("Recalculate tiers for all members now?")) ev.preventDefault(); }}>
+            <input type="hidden" name="intent" value="retier" />
+            <s-button type="submit" variant="primary">Recalculate all members</s-button>
+          </Form>
+        }
+      />
+
       {result && "error" in result && result.error && <s-banner tone="critical" heading="Not saved">{result.error}</s-banner>}
 
-      <s-section heading="Current tiers" padding="none">
-        <s-table>
-          <s-table-header-row>
-            <s-table-header format="numeric">Rank</s-table-header>
-            <s-table-header listSlot="primary">Name</s-table-header>
-            <s-table-header format="numeric">Threshold</s-table-header>
-            <s-table-header>Basis</s-table-header>
-            <s-table-header format="numeric">Multiplier</s-table-header>
-            <s-table-header format="numeric">Members</s-table-header>
-            <s-table-header>Perks</s-table-header>
-            <s-table-header></s-table-header>
-          </s-table-header-row>
-          <s-table-body>
+      {/* Tier ladder */}
+      <div className="aas-panel">
+        <div className="aas-h">Tier ladder — lowest to highest</div>
+        {tiers.length === 0 ? <div className="aas-muted">No tiers yet — add your entry tier below (rank 0, threshold 0).</div> : (
+          <div className="aas-ladder">
             {tiers.map((t) => (
-              <s-table-row key={t.id}>
-                <s-table-cell>{t.rank}</s-table-cell>
-                <s-table-cell><s-badge>{t.name}</s-badge></s-table-cell>
-                <s-table-cell>{t.threshold}</s-table-cell>
-                <s-table-cell>{BASIS_LABEL[t.basis]}</s-table-cell>
-                <s-table-cell>{t.multiplier}×</s-table-cell>
-                <s-table-cell>{t.members}</s-table-cell>
-                <s-table-cell>{t.perks ?? ""}</s-table-cell>
-                <s-table-cell>
-                  <s-stack direction="inline" gap="small">
-                    <s-button type="button" variant="tertiary" onClick={() => setEditing(t)}>Edit</s-button>
-                    <Form method="post" onSubmit={(ev) => { if (!confirm(`Delete tier "${t.name}"? Members are re-tiered on their next activity.`)) ev.preventDefault(); }}>
-                      <input type="hidden" name="intent" value="delete" />
-                      <input type="hidden" name="id" value={t.id} />
-                      <s-button type="submit" tone="critical" variant="tertiary">Delete</s-button>
-                    </Form>
-                  </s-stack>
-                </s-table-cell>
-              </s-table-row>
+              <div key={t.id} className="aas-tiercard" style={e?.id === t.id ? { borderColor: "#c60d11" } : undefined}>
+                <div className="rk">RANK {t.rank}</div>
+                <div className="nm" style={{ color: t.color || "#c60d11" }}>{t.name}</div>
+                <div className="aas-kv"><span>Members</span><b>{fmtInt(t.members)}</b></div>
+                <div className="aas-kv"><span>Reached at</span><b>{t.basis === "LIFETIME_POINTS" ? `${fmtInt(t.threshold)} lifetime pts` : t.basis === "LIFETIME_SPEND" ? `$${fmtInt(t.threshold)} lifetime` : `$${fmtInt(t.threshold)} / 12 mo`}</b></div>
+                <div className="aas-kv"><span>Earning</span><b>{t.multiplier}×</b></div>
+                <div className="aas-kv"><span>Perks</span><b style={{ textAlign: "right" }}>{t.perks || "—"}</b></div>
+                <div className="ft">
+                  <s-button type="button" variant="secondary" onClick={() => setEditing(t)}>Edit</s-button>
+                  <Form method="post" onSubmit={(ev) => { if (!confirm(`Delete tier "${t.name}"? Its members drop to the next lower tier when you recalculate.`)) ev.preventDefault(); }}>
+                    <input type="hidden" name="intent" value="delete" /><input type="hidden" name="id" value={t.id} />
+                    <s-button type="submit" tone="critical" variant="tertiary">Delete</s-button>
+                  </Form>
+                </div>
+              </div>
             ))}
-            {tiers.length === 0 && <s-table-row><s-table-cell>No tiers yet — add one below.</s-table-cell></s-table-row>}
-          </s-table-body>
-        </s-table>
-      </s-section>
+          </div>
+        )}
+      </div>
 
-      <s-section heading="Recalculate">
-        <s-paragraph>Re-places every member in the highest tier they qualify for. Use after importing balances or changing thresholds. Members' account pages pick up the new tier on their next visit or order.</s-paragraph>
-        <Form method="post" onSubmit={(ev) => { if (!confirm("Recalculate tiers for all members now?")) ev.preventDefault(); }}>
-          <input type="hidden" name="intent" value="retier" />
-          <s-button type="submit" variant="primary">Recalculate all members</s-button>
-        </Form>
-      </s-section>
-
-      <s-section heading={e ? `Edit tier: ${e.name}` : "Add a tier"}>
-        <s-paragraph>
-          Rank 0 is the entry tier (threshold 0). The highest rank whose threshold a customer meets is assigned.
-          Multiplier 1.25 means 25% more points on every order.
-        </s-paragraph>
+      {/* Add / edit */}
+      <div className="aas-panel">
+        <div className="aas-h">{e ? `Edit tier: ${e.name}` : "Add a tier"}</div>
+        <p className="aas-muted" style={{ margin: "0 0 12px", fontSize: 13 }}>
+          Members land in the highest-ranked tier whose threshold they meet. A multiplier of 1.25 means 25% more points on every order. After adding or changing tiers, press <b>Recalculate all members</b>.
+        </p>
         <Form method="post" key={e?.id ?? "new"}>
           <input type="hidden" name="id" value={e?.id ?? ""} />
           <s-grid gridTemplateColumns="repeat(auto-fit, minmax(160px, 1fr))" gap="base">
             <s-text-field name="name" label="Name" placeholder="Silver" defaultValue={e?.name ?? ""} required />
-            <s-number-field name="rank" label="Rank" defaultValue={String(e?.rank ?? tiers.length)} min={0} />
+            <s-number-field name="rank" label="Rank" defaultValue={String(e?.rank ?? nextRank)} min={0} />
             <s-number-field name="threshold" label="Threshold" defaultValue={String(e?.threshold ?? 0)} min={0} />
             <s-select name="basis" label="Threshold basis" defaultValue={e?.basis ?? "LIFETIME_POINTS"}>
               <s-option value="LIFETIME_POINTS">Lifetime points</s-option>
@@ -153,13 +148,15 @@ export default function Tiers() {
             <s-number-field name="multiplier" label="Multiplier" defaultValue={String(e?.multiplier ?? 1)} step={0.05} min={0} />
             <s-text-field name="color" label="Colour (hex)" placeholder="#c60d11" defaultValue={e?.color ?? ""} />
           </s-grid>
-          <s-text-field name="perks" label="Perks (shown to customers)" placeholder="Free shipping on orders over $99, early access to sales" defaultValue={e?.perks ?? ""} />
-          <s-stack direction="inline" gap="base">
+          <div style={{ marginTop: 12 }}>
+            <s-text-field name="perks" label="Perks (shown to customers)" placeholder="Free shipping on orders over $99, early access to sales" defaultValue={e?.perks ?? ""} />
+          </div>
+          <div className="aas-actions" style={{ marginTop: 14 }}>
             <s-button type="submit" variant="primary">{e ? "Save changes" : "Add tier"}</s-button>
             {e && <s-button type="button" onClick={() => setEditing(null)}>Cancel</s-button>}
-          </s-stack>
+          </div>
         </Form>
-      </s-section>
+      </div>
     </s-page>
   );
 }

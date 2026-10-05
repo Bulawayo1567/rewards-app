@@ -54,7 +54,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     prisma.pointsLedger.findMany({ where: { shop, type: { not: "MIGRATION" } }, orderBy: { createdAt: "desc" }, take: 12, include: { customer: { select: { id: true, email: true, firstName: true, lastName: true } } } }),
     prisma.pointsLedger.findMany({ where: { shop, createdAt: { gte: since }, type: { notIn: ["MIGRATION", "EXPIRY", "ORDER_REVERSAL", "REDEEM_REVERSAL"] } }, select: { createdAt: true, points: true, type: true } }),
     prisma.customer.count({ where: { shop, balance: { gt: 0 } } }),
-    prisma.customer.count({ where: { shop, balance: { gt: 0 }, updatedAt: { lt: d90 } } }),
+    prisma.customer.count({ where: { shop, balance: { gt: 0 }, ledger: { none: { type: { not: "MIGRATION" }, createdAt: { gte: d90 } } } } }),
     prisma.customer.count({ where: { shop, pendingBalance: { gt: 0 } } }),
     prisma.customer.count({ where: { shop, balance: { lt: 0 } } }),
     prisma.customer.count({ where: { shop, shopifyId: null } }),
@@ -129,7 +129,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     days, tierMix,
     segments: [
       { key: "top", label: "Members with points", count: segTop },
-      { key: "dormant", label: "Dormant, holding points", count: segDormant },
+      { key: "dormant", label: "Dormant with points", count: segDormant },
       { key: "pending", label: "Pending points", count: segPending },
       { key: "noaccount", label: "No Shopify account yet", count: segNoAccount },
       { key: "negative", label: "Negative balances", count: segNegative },
