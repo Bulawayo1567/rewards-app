@@ -1,0 +1,49 @@
+In prisma\schema.prisma:
+
+1) Inside `model Customer { ... }`, add after `smileId         String?`:
+
+  spam            String   @default("ok")      // ok | suspicious | spam | trusted
+  spamScore       Int      @default(0)
+  spamReasons     String?
+  marketingConsent Boolean @default(false)
+  emailLogs       EmailLog[]
+
+2) At the END of the file, add:
+
+model EmailAutomation {
+  id         String   @id @default(cuid())
+  shop       String
+  template   String                       // welcome | birthday_reminder | subscribe_reminder | how_to_redeem | balance_reminder | expiring_soon | dormant | tier_up | announcement
+  subject    String
+  intro      String?                      // optional custom paragraph
+  enabled    Boolean  @default(false)
+  cadence    String   @default("monthly") // event | once | weekly | monthly
+  lastRunAt  DateTime?
+  sentCount  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([shop, template])
+}
+
+model EmailLog {
+  id         String   @id @default(cuid())
+  shop       String
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  template   String
+  subject    String
+  providerId String?
+  sentAt     DateTime @default(now())
+
+  @@index([shop, customerId, template, sentAt])
+  @@index([shop, template, sentAt])
+}
+
+Then run:  npx prisma migrate dev --name spam_and_email
+(If it ends with EPERM: q the dev server, npx prisma generate, shopify app dev again.)
+
+Vercel → Settings → Environment Variables → add:
+  RESEND_API_KEY   = your Resend key
+  EMAIL_FROM       = All About Sewing Rewards <rewards@allaboutsewing.ca>   (a verified Resend domain)
+  APP_SECRET       = any long random string (signs unsubscribe links)

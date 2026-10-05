@@ -161,6 +161,7 @@ export async function awardOrderPoints(shop: string, graphql: AdminGraphql, orde
     last_name: order.customer?.last_name,
   });
   if (!customer) return { skipped: "customer upsert failed" };
+  if (customer.spam === "spam") return { skipped: "confirmed spam account" };
 
   const tier = customer.tierId ? await prisma.tier.findUnique({ where: { id: customer.tierId } }) : null;
   const tierMultiplier = tier ? Number(tier.multiplier) : 1;

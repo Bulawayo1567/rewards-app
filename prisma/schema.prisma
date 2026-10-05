@@ -72,12 +72,16 @@ model Customer {
   tier            Tier?    @relation(fields: [tierId], references: [id])
   tierAssignedAt  DateTime?
   smileId         String?             // Smile.io customer id, kept for reconciliation
+  spam             String   @default("ok")
+  spamScore        Int      @default(0)
+  spamReasons      String?
+  marketingConsent Boolean  @default(false)
+  emailLogs        EmailLog[]
   ledger          PointsLedger[]
   redemptions     Redemption[]
   plays           CampaignPlay[]
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-
   @@unique([shop, email])
   @@index([shop, shopifyId])
   @@index([shop, tierId])
@@ -352,4 +356,33 @@ model ImportBatch {
   staffEmail   String?
   createdAt    DateTime @default(now())
   committedAt  DateTime?
+}
+model EmailAutomation {
+  id         String    @id @default(cuid())
+  shop       String
+  template   String
+  subject    String
+  intro      String?
+  enabled    Boolean   @default(false)
+  cadence    String    @default("monthly")
+  lastRunAt  DateTime?
+  sentCount  Int       @default(0)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@unique([shop, template])
+}
+
+model EmailLog {
+  id         String   @id @default(cuid())
+  shop       String
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  template   String
+  subject    String
+  providerId String?
+  sentAt     DateTime @default(now())
+
+  @@index([shop, customerId, template, sentAt])
+  @@index([shop, template, sentAt])
 }

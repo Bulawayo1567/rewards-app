@@ -28,11 +28,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     members, newMembers, outstanding, pendingPts, awarded, redeemed, redemptions, orders,
     codesIssued, codesUsed, activeCodes, expiringCodes, plays, playsWithCode, playCodesUsed, liveCampaign,
     tiers, tierAgg, rewardsCount, earnRulesCount, topRewards, negative, recent, daily,
-    segTop, segDormant, segPending, segNegative, segNoAccount, migratedCount, ruleCount, campaignCount,
+    segTop, segDormant, segPending, segNegative, segNoAccount, migratedCount, ruleCount, campaignCount, suspiciousCount,
   ] = await Promise.all([
-    prisma.customer.count({ where: { shop } }),
-    prisma.customer.count({ where: { shop, createdAt: { gte: since }, ledger: { none: { type: "MIGRATION" } } } }),
-    prisma.customer.aggregate({ where: { shop }, _sum: { balance: true } }),
+    prisma.customer.count({ where: { shop, spam: { not: "spam" } } }),
+    prisma.customer.count({ where: { shop, createdAt: { gte: since }, spam: { not: "spam" }, ledger: { none: { type: "MIGRATION" } } } }),
+    prisma.customer.aggregate({ where: { shop, spam: { not: "spam" } }, _sum: { balance: true } }),
     prisma.customer.aggregate({ where: { shop }, _sum: { pendingBalance: true } }),
     prisma.pointsLedger.aggregate({ where: { shop, points: { gt: 0 }, type: { notIn: ["MIGRATION", "REDEEM_REVERSAL"] }, createdAt: { gte: since } }, _sum: { points: true } }),
     prisma.pointsLedger.aggregate({ where: { shop, type: "REDEEM", createdAt: { gte: since } }, _sum: { points: true } }),
@@ -62,6 +62,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     prisma.importBatch.count({ where: { shop, status: "COMMITTED" } }),
     prisma.productRule.count({ where: { shop, active: true } }),
     prisma.campaign.count({ where: { shop } }),
+    prisma.customer.count({ where: { shop, spam: "suspicious" } }),
   ]);
 
   const rewardNames = await prisma.reward.findMany({ where: { id: { in: topRewards.map((r) => r.rewardId) } }, select: { id: true, name: true } });
@@ -137,6 +138,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     ],
     topRewards: topRewards.map((r) => ({ name: rewardNames.find((x) => x.id === r.rewardId)?.name ?? "(deleted)", count: r._count._all })),
     attention: {
+      suspicious: suspiciousCount,
       expiring: expiringCodes.map((r) => ({ id: r.id, customerId: r.customerId, who: [r.customer.firstName, r.customer.lastName].filter(Boolean).join(" ") || r.customer.email, reward: r.reward.name, code: r.discountCode, expiresAt: r.expiresAt.toISOString() })),
       negative: negative.map((c) => ({ id: c.id, who: [c.firstName, c.lastName].filter(Boolean).join(" ") || c.email, balance: c.balance })),
       nearTier,
@@ -150,7 +152,7 @@ export default function Dashboard() {
   const maxDay = Math.max(1, ...days.map((d) => Math.max(d.awarded, d.redeemed)));
   const maxTier = Math.max(1, ...tierMix.map((t) => t.count));
   const untiered = tierMix.length > 1 ? tierMix[0].count : 0;
-  const attnCount = attention.expiring.length + attention.negative.length + attention.nearTier.length + (untiered ? 1 : 0);
+  const attnCount = attention.expiring.length + attention.negative.length + attention.nearTier.length + (untiered ? 1 : 0) + (attention.suspicious ? 1 : 0);
   const todo = checklist.filter((c) => !c.ok);
   const [tab, setTab] = useState<"activity" | "attention">("activity");
 
@@ -350,6 +352,9 @@ export default function Dashboard() {
         {tab === "attention" && (
           <>
             {attnCount === 0 && <div className="aas-muted">Nothing outstanding.</div>}
+            {attention.suspicious > 0 && (
+              <div className="aas-attn"><h4>{fmtInt(attention.suspicious)} suspicious sign-ups to review</h4><p>Email/name mismatches, repeated names or sign-up bursts. <Link to="/app/spam">Review them</Link> — confirmed spam stops earning and drops out of counts.</p></div>
+            )}
             {untiered > 0 && (
               <div className="aas-attn"><h4>{fmtInt(untiered)} members have no tier</h4><p>Usually members imported before tiers existed. <s-link href="/app/tiers">Recalculate all members</s-link> to place everyone.</p></div>
             )}

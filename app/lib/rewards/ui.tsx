@@ -70,6 +70,11 @@ export const EARN_TABS: TabItem[] = [
   { key: "rewards", href: "/app/rewards", label: "Rewards" },
   { key: "rules", href: "/app/product-rules", label: "Product rules" },
   { key: "campaigns", href: "/app/campaigns", label: "Campaigns" },
+  { key: "emails", href: "/app/emails", label: "Emails" },
+];
+export const MEMBERS_TABS: TabItem[] = [
+  { key: "all", href: "/app/customers", label: "Members" },
+  { key: "spam", href: "/app/spam", label: "Suspicious" },
 ];
 export const SETTINGS_TABS: TabItem[] = [
   { key: "program", href: "/app/settings", label: "Program" },
@@ -169,6 +174,11 @@ export const EXTRA_CSS = `.st-wrap{display:grid;grid-template-columns:minmax(0,1
 .st-foot{display:flex;gap:10px;align-items:center;margin-top:4px}
 .st-pct{font-size:12px;color:#8a8a8a}
 .st-table .aas-tbl td{padding:11px 8px}
+.st-reason{display:inline-block;font-size:11px;color:#7a5600;background:#fff4d6;border-radius:6px;padding:2px 7px;margin:2px 4px 0 0}
+.st-preview{border:2px dashed #e3d9cc;border-radius:14px;overflow:hidden;background:#f4eee4}
+.st-preview iframe{display:block;width:100%;height:640px;border:0;background:#f4eee4}
+.st-auto{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px;border:1.5px dashed #e3d9cc;border-radius:14px;background:#fff}
+.st-auto.on{border-color:#c60d11;background:#fffafa}
 @media (max-width:760px){.st-row{grid-template-columns:1fr}.st-item{grid-template-columns:auto minmax(0,1fr)}.st-item .acts{grid-column:1/-1}}
 `;
 

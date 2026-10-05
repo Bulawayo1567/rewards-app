@@ -77,7 +77,7 @@ export async function recalcCustomer(shop: string, customerId: string) {
     }
   }
 
-  return prisma.customer.update({
+  const updated = await prisma.customer.update({
     where: { id: customerId },
     data: {
       balance: available._sum.points ?? 0,
@@ -88,6 +88,15 @@ export async function recalcCustomer(shop: string, customerId: string) {
     },
     include: { tier: true },
   });
+  // Moved up a tier? Fire the tier_up email if that automation is on (never blocks).
+  if (tierId && tierId !== customer.tierId) {
+    const prevRank = customer.tierId ? (tiers.find((t) => t.id === customer.tierId)?.rank ?? -1) : -1;
+    const newTier = tiers.find((t) => t.id === tierId);
+    if (newTier && newTier.rank > prevRank) {
+      import("./email.server").then((m) => m.fireEvent(shop, "tier_up", customerId, { perks: newTier.perks ?? "", multiplier: String(Number(newTier.multiplier)) })).catch(() => {});
+    }
+  }
+  return updated;
 }
 
 async function rolling12mSpend(shop: string, customerId: string) {

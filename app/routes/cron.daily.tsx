@@ -2,6 +2,7 @@ import type { LoaderFunctionArgs } from "react-router";
 import prisma from "../db.server";
 import { unauthenticated } from "../shopify.server";
 import { recalcCustomer, syncCustomerMetafields } from "../lib/rewards/customers.server";
+import { runScheduled } from "../lib/rewards/email.server";
 
 /**
  * Daily maintenance, triggered by Vercel Cron (see vercel.json).
@@ -55,6 +56,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       if (graphql) await syncCustomerMetafields(graphql, updated);
     }
   }
+
+  // 3. Scheduled emails, per shop with an enabled automation
+  const shops = await prisma.emailAutomation.findMany({ where: { enabled: true }, select: { shop: true }, distinct: ["shop"] });
+  const emails: Record<string, unknown> = {};
+  for (const { shop } of shops) { try { emails[shop] = await runScheduled(shop); } catch (e) { console.error("[rewards] scheduled emails failed", shop, e); } }
+  summary.emails = emails;
 
   console.log("[rewards] cron daily", summary);
   return new Response(JSON.stringify(summary), { headers: { "Content-Type": "application/json" } });

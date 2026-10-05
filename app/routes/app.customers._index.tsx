@@ -4,7 +4,7 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { fmtDate, fmtInt } from "../lib/rewards/format";
-import { Hero, UIStyles } from "../lib/rewards/ui";
+import { Hero, UIStyles, Tabs, MEMBERS_TABS, Pill } from "../lib/rewards/ui";
 
 const d90 = () => new Date(Date.now() - 90 * 86_400_000);
 // "Activity" = a real points event (orders, redemptions, bonuses, adjustments) — not imports or record edits.
@@ -28,13 +28,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const page = Math.max(1, Number(url.searchParams.get("page") ?? 1));
   const take = 50;
   const s = SEGMENTS[seg];
-  const where = s ? s.where(shop) : {
-    shop,
+  const where = s ? { ...s.where(shop), spam: { not: "spam" } } : {
+    shop, spam: { not: "spam" },
     ...(q ? { OR: [{ email: { contains: q, mode: "insensitive" } }, { firstName: { contains: q, mode: "insensitive" } }, { lastName: { contains: q, mode: "insensitive" } }] } : {}),
   };
   const [total, all, customers, ...segCounts] = await Promise.all([
     prisma.customer.count({ where }),
-    prisma.customer.count({ where: { shop } }),
+    prisma.customer.count({ where: { shop, spam: { not: "spam" } } }),
     prisma.customer.findMany({ where, include: { tier: true }, orderBy: s ? s.order : { lifetimePoints: "desc" }, skip: (page - 1) * take, take }),
     ...Object.values(SEGMENTS).map((x) => prisma.customer.count({ where: x.where(shop) })),
   ]);
@@ -45,7 +45,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return {
     q, seg, segLabel: s?.label ?? "", page, pages: Math.max(1, Math.ceil(total / take)), total, all,
     segments: Object.entries(SEGMENTS).map(([k, v], i) => ({ key: k, label: v.label, count: segCounts[i] as number })),
-    customers: customers.map((c) => ({ id: c.id, email: c.email, name: [c.firstName, c.lastName].filter(Boolean).join(" "), balance: c.balance, pending: c.pendingBalance, lifetime: c.lifetimePoints, tier: c.tier?.name ?? null, linked: !!c.shopifyId, last: lastMap.get(c.id) ?? null })),
+    customers: customers.map((c) => ({ id: c.id, spam: c.spam, email: c.email, name: [c.firstName, c.lastName].filter(Boolean).join(" "), balance: c.balance, pending: c.pendingBalance, lifetime: c.lifetimePoints, tier: c.tier?.name ?? null, linked: !!c.shopifyId, last: lastMap.get(c.id) ?? null })),
   };
 };
 
@@ -56,6 +56,7 @@ export default function Customers() {
     <s-page inlineSize="large">
       <UIStyles />
       <Hero title={segLabel || "Members"} sub={<>{fmtInt(total)} {segLabel || q ? "matching" : "members"}{segLabel || q ? ` of ${fmtInt(all)}` : ""}</>} />
+      <Tabs items={MEMBERS_TABS} active="all" />
 
       <div className="aas-panel">
         <div className="aas-bar">
@@ -82,7 +83,7 @@ export default function Customers() {
             <tbody>
               {customers.map((c) => (
                 <tr key={c.id}>
-                  <td><s-link href={`/app/customers/${c.id}`}>{c.name || "(no name)"}</s-link></td>
+                  <td><s-link href={`/app/customers/${c.id}`}>{c.name || "(no name)"}</s-link>{c.spam === "suspicious" && <> <Pill tone="warn">suspicious</Pill></>}</td>
                   <td className="dim">{c.email}</td>
                   <td>{c.tier ? <span className="aas-pill tier">{c.tier}</span> : <span className="aas-muted">—</span>}</td>
                   <td className="num"><b>{fmtInt(c.balance)}</b></td>

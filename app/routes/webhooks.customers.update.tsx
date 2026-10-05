@@ -14,6 +14,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     if (!c) return new Response(null, { status: 200 });
 
     const subscribed = p.email_marketing_consent?.state === "subscribed";
+    await prisma.customer.update({ where: { id: c.id }, data: { marketingConsent: subscribed } });
+    if (c.spam === "spam" || c.spam === "suspicious") return new Response(null, { status: 200 });
     const rule = await prisma.earnRule.findUnique({ where: { shop_event: { shop, event: "NEWSLETTER" } } });
 
     if (subscribed && rule?.active && rule.points > 0 && !c.newsletterAwarded) {
