@@ -145,7 +145,8 @@ export default function Dashboard() {
   const { range, tiles, program, liveCampaign, checklist, kpis, days, tierMix, segments, topRewards, attention, recent } = useLoaderData<typeof loader>();
   const maxDay = Math.max(1, ...days.map((d) => Math.max(d.awarded, d.redeemed)));
   const maxTier = Math.max(1, ...tierMix.map((t) => t.count));
-  const attnCount = attention.expiring.length + attention.negative.length + attention.nearTier.length;
+  const untiered = tierMix.length > 1 ? tierMix[0].count : 0;
+  const attnCount = attention.expiring.length + attention.negative.length + attention.nearTier.length + (untiered ? 1 : 0);
   const todo = checklist.filter((c) => !c.ok);
   const barW = Math.max(6, Math.floor(860 / days.length) - 4);
 
@@ -178,7 +179,12 @@ export default function Dashboard() {
 .aas-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .aas-find{display:flex;align-items:center;gap:8px;flex:1 1 320px;max-width:460px}
 .aas-find s-text-field{flex:1}
-.aas-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}`}</style>
+.aas-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.aas-cols3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:stretch;margin:6px 0}
+.aas-cols3>s-section{height:100%}
+@media (max-width:1000px){.aas-cols3{grid-template-columns:1fr}}
+.aas-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-bottom:1px dashed #e3d9cc}
+.aas-row:last-of-type{border-bottom:0}`}</style>
       <div className="aas-tiles">
         {tiles.map((t) => (
           <a key={t.href} href={t.href} style={{ textDecoration: "none", color: "#1f1f1f", background: "#fff", border: "2px dashed #e3d9cc", borderRadius: 12, padding: "12px 12px 10px", display: "block", transition: "border-color .15s" }}
@@ -245,13 +251,13 @@ export default function Dashboard() {
         <s-stack direction="inline" gap="base"><s-badge tone="critical">Awarded</s-badge><s-badge>Redeemed</s-badge></s-stack>
       </s-section>
 
-      <s-grid gridTemplateColumns="repeat(auto-fit, minmax(340px, 1fr))" gap="base">
+      <div className="aas-cols3">
         {/* Tier mix + liability */}
         <s-section heading="Members & liability by tier">
           {tierMix.map((t) => (
             <s-stack key={t.id ?? "none"} gap="none">
               <s-stack direction="inline" justifyContent="space-between"><s-text>{t.name}</s-text><s-text emphasis="bold">{fmtInt(t.count)} · {fmtMoney(t.liability)}</s-text></s-stack>
-              <div style={{ height: 8, background: "#eee", borderRadius: 4, marginBottom: 10 }}><div style={{ width: `${(t.count / maxTier) * 100}%`, height: "100%", background: "#c60d11", borderRadius: 4 }} /></div>
+              <div style={{ height: 8, background: "#eee", borderRadius: 4, margin: "4px 0 10px" }}><div style={{ width: `${(t.count / maxTier) * 100}%`, height: "100%", background: "#c60d11", borderRadius: 4 }} /></div>
             </s-stack>
           ))}
           <s-link href="/app/tiers">Manage tiers</s-link>
@@ -259,29 +265,32 @@ export default function Dashboard() {
 
         {/* Rewards performance */}
         <s-section heading="Rewards (90d)">
-          {topRewards.length === 0 ? <s-text color="subdued">No redemptions yet.</s-text> : topRewards.map((r) => (
-            <s-stack key={r.name} direction="inline" justifyContent="space-between"><s-text>{r.name}</s-text><s-text emphasis="bold">{fmtInt(r.count)}</s-text></s-stack>
+          {topRewards.length === 0 ? <s-paragraph><s-text color="subdued">No redemptions yet.</s-text></s-paragraph> : topRewards.map((r) => (
+            <div key={r.name} className="aas-row"><s-text>{r.name}</s-text><s-text emphasis="bold">{fmtInt(r.count)}</s-text></div>
           ))}
           <s-paragraph><s-link href="/app/rewards">Manage rewards</s-link> · <s-link href="/app/product-rules">Product rules</s-link></s-paragraph>
         </s-section>
-      </s-grid>
 
-      {/* Segments */}
-      <s-section heading="Segments">
-        <s-grid gridTemplateColumns="repeat(auto-fit, minmax(190px, 1fr))" gap="base">
-          {segments.map((s) => (
-            <s-box key={s.key} padding="base" border="base" borderRadius="base">
-              <s-text color="subdued">{s.label}</s-text>
-              <s-heading>{fmtInt(s.count)}</s-heading>
-              <s-link href={`/app/customers?segment=${s.key}`}>View list</s-link>
-            </s-box>
+        {/* Segments */}
+        <s-section heading="Segments">
+          {segments.map((x) => (
+            <div key={x.key} className="aas-row">
+              <s-link href={`/app/customers?segment=${x.key}`}>{x.label}</s-link>
+              <s-text emphasis="bold">{fmtInt(x.count)}</s-text>
+            </div>
           ))}
-        </s-grid>
-      </s-section>
+        </s-section>
+      </div>
 
       {/* Attention */}
       <s-section heading={`Needs attention${attnCount ? ` (${attnCount})` : ""}`}>
         {attnCount === 0 && <s-text color="subdued">Nothing outstanding.</s-text>}
+        {untiered > 0 && (
+          <s-box padding="base" border="base" borderRadius="base">
+            <s-heading>{fmtInt(untiered)} members have no tier</s-heading>
+            <s-paragraph>Usually members imported before tiers existed. <s-link href="/app/tiers">Recalculate all members</s-link> to place everyone.</s-paragraph>
+          </s-box>
+        )}
         {attention.nearTier.length > 0 && (
           <s-box padding="base" border="base" borderRadius="base">
             <s-heading>Close to the next tier — worth a nudge</s-heading>

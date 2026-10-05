@@ -22,6 +22,24 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const fd = await request.formData();
   const intent = str(fd, "intent");
 
+  if (intent === "retier") {
+    // Fast bulk re-tier: walk tiers lowest → highest so each member ends on the highest tier they qualify for.
+    // Rolling-12-month tiers are approximated with lifetime spend here; exact values settle on each member's next order.
+    const tiers = await prisma.tier.findMany({ where: { shop }, orderBy: { rank: "asc" } });
+    await prisma.$transaction([
+      prisma.customer.updateMany({ where: { shop }, data: { tierId: null } }),
+      ...tiers.map((t) => prisma.customer.updateMany({
+        where: t.basis === "LIFETIME_POINTS"
+          ? { shop, lifetimePoints: { gte: Math.ceil(Number(t.threshold)) } }
+          : { shop, lifetimeSpend: { gte: t.threshold } },
+        data: { tierId: t.id, tierAssignedAt: new Date() },
+      })),
+    ]);
+    const counts = await prisma.customer.groupBy({ by: ["tierId"], where: { shop }, _count: { _all: true } });
+    const placed = counts.filter((c) => c.tierId).reduce((n, c) => n + c._count._all, 0);
+    return { ok: true, message: `Recalculated — ${placed.toLocaleString()} members placed in a tier` };
+  }
+
   if (intent === "delete") {
     const id = str(fd, "id");
     await prisma.customer.updateMany({ where: { shop, tierId: id }, data: { tierId: null } });
@@ -106,6 +124,14 @@ export default function Tiers() {
             {tiers.length === 0 && <s-table-row><s-table-cell>No tiers yet — add one below.</s-table-cell></s-table-row>}
           </s-table-body>
         </s-table>
+      </s-section>
+
+      <s-section heading="Recalculate">
+        <s-paragraph>Re-places every member in the highest tier they qualify for. Use after importing balances or changing thresholds. Members' account pages pick up the new tier on their next visit or order.</s-paragraph>
+        <Form method="post" onSubmit={(ev) => { if (!confirm("Recalculate tiers for all members now?")) ev.preventDefault(); }}>
+          <input type="hidden" name="intent" value="retier" />
+          <s-button type="submit" variant="primary">Recalculate all members</s-button>
+        </Form>
       </s-section>
 
       <s-section heading={e ? `Edit tier: ${e.name}` : "Add a tier"}>
