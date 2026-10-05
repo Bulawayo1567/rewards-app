@@ -60,11 +60,11 @@ export default function Customers() {
       <div className="aas-panel">
         <div className="aas-bar">
           <Form method="get" className="aas-find">
-            <s-text-field name="q" label="Search members" labelAccessibilityVisibility="exclusive" placeholder="Search by email or name" defaultValue={q} />
-            <s-button type="submit" variant="primary">Search</s-button>
+            <div className="fld" style={{ flex: 1 }}><div className="box"><input className="txt" name="q" placeholder="Search by email or name" defaultValue={q} /></div></div>
+            <button className="st-btn primary" type="submit">Search</button>
           </Form>
           <div className="aas-actions">
-            <s-button href="/app/export/members" target="_top">Export CSV</s-button>
+            <a className="st-btn secondary" href="/app/export/members" target="_top">Export CSV</a>
           </div>
         </div>
         <div className="aas-chips">
@@ -99,8 +99,8 @@ export default function Customers() {
         <div className="aas-pager">
           <span className="aas-muted">Page {page} of {pages}</span>
           <div className="aas-actions">
-            <s-button href={link(page - 1)} disabled={page <= 1}>Previous</s-button>
-            <s-button href={link(page + 1)} disabled={page >= pages}>Next</s-button>
+            {page > 1 ? <Link className="st-btn secondary sm" to={link(page - 1)}>Previous</Link> : <span className="st-btn secondary sm" style={{ opacity: .5 }}>Previous</span>}
+            {page < pages ? <Link className="st-btn secondary sm" to={link(page + 1)}>Next</Link> : <span className="st-btn secondary sm" style={{ opacity: .5 }}>Next</span>}
           </div>
         </div>
       </div>

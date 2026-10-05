@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { LoaderFunctionArgs, ActionFunctionArgs, HeadersFunction } from "react-router";
 import { Form, useLoaderData, useNavigation } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
@@ -6,6 +7,7 @@ import prisma from "../db.server";
 import { getProgram } from "../lib/rewards/program.server";
 import { useActionToast } from "../lib/rewards/use-toast";
 import { str, num, bool } from "../lib/rewards/format";
+import { Hero, UIStyles, Tabs, SETTINGS_TABS, Card, Field, Toggle, Chip, Ribbon } from "../lib/rewards/ui";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -54,33 +56,68 @@ export default function Settings() {
   const nav = useNavigation();
   useActionToast();
   const saving = nav.state !== "idle";
-  const per100 = program.pointValueCents > 0 ? (100 / program.pointValueCents).toLocaleString() : "—";
+  const [rate, setRate] = useState(program.pointsPerDollar);
+  const [cents, setCents] = useState(program.pointValueCents);
+  const [active, setActive] = useState(program.active);
+  const [pn, setPn] = useState(program.pointsName || "points");
+  const earned = Math.floor(100 * (Number(rate) || 0));
+  const back = (earned * (Number(cents) || 0)) / 100;
+  const perDollar = Number(cents) > 0 ? Math.round(100 / Number(cents)) : 0;
+
   return (
-    <s-page heading="Program settings">
+    <s-page inlineSize="large">
+      <UIStyles />
+      <Hero title="Settings" sub={<>{program.name} · {active ? "live" : "paused"}</>} />
+      <Tabs items={SETTINGS_TABS} active="program" />
+
       <Form method="post">
-        <s-section heading="Basics">
-          <s-text-field name="name" label="Program name" defaultValue={program.name} />
-          <s-text-field name="pointsName" label="What points are called" defaultValue={program.pointsName} details='Shown to customers, e.g. "points" or "stitches"' />
-          <s-checkbox name="active" label="Program active (award points on paid orders)" defaultChecked={program.active} />
-        </s-section>
+        <div className="st-wrap">
+          <div>
+            <Card icon="🧵" title="Program" sub="The name and currency word customers see everywhere.">
+              <div className="st-grid two">
+                <Field label="Program name"><input className="txt" name="name" defaultValue={program.name} /></Field>
+                <Field label="What points are called" hint='e.g. "points" or "Stitches"'><input className="txt" name="pointsName" defaultValue={program.pointsName} onInput={(e) => setPn(e.currentTarget.value || "points")} /></Field>
+              </div>
+              <Toggle name="active" checked={active} onChange={setActive} title={active ? "Program is live" : "Program is paused"} desc={active ? "Paid orders are earning points." : "No points are awarded while paused. Balances and redemptions are unaffected."} />
+            </Card>
 
-        <s-section heading="Earning">
-          <s-number-field name="pointsPerDollar" label="Points per $1 spent" defaultValue={String(program.pointsPerDollar)} step={0.25} min={0.25} required />
-          <s-number-field name="holdDays" label="Hold period (days)" defaultValue={String(program.holdDays)} min={0} details="Points from an order stay pending this many days (your return window). 0 = available immediately." />
-          <s-number-field name="expiryMonths" label="Points expire after (months)" defaultValue={String(program.expiryMonths)} min={0} details="0 = never expire" />
-          <s-checkbox name="earnOnShipping" label="Earn on shipping charges" defaultChecked={program.earnOnShipping} />
-          <s-checkbox name="earnOnTax" label="Earn on tax" defaultChecked={program.earnOnTax} />
-        </s-section>
+            <Card icon="🪡" title="Earning" sub="How fast members earn, and whether points wait out your return window first.">
+              <div className="st-grid">
+                <Field label="Earn rate" unit={`${pn} / $1`}><input name="pointsPerDollar" type="number" step="0.25" min="0.25" required defaultValue={program.pointsPerDollar} onInput={(e) => setRate(Number(e.currentTarget.value))} /></Field>
+                <Field label="Hold period" unit="days" hint="0 = available instantly"><input name="holdDays" type="number" min="0" defaultValue={program.holdDays} /></Field>
+                <Field label="Expire after" unit="months" hint="0 = never expire"><input name="expiryMonths" type="number" min="0" defaultValue={program.expiryMonths} /></Field>
+              </div>
+              <div className="st-chips">
+                <Chip name="earnOnShipping" label="Earn on shipping" defaultChecked={program.earnOnShipping} />
+                <Chip name="earnOnTax" label="Earn on tax" defaultChecked={program.earnOnTax} />
+              </div>
+            </Card>
 
-        <s-section heading="Redeeming">
-          <s-number-field name="pointValueCents" label="Value of one point (cents)" defaultValue={String(program.pointValueCents)} step={0.25} min={0.01} required details={`Currently ${per100} points = $1. Shown to customers as "Worth $X in rewards".`} />
-          <s-number-field name="minRedeemPoints" label="Minimum balance to redeem" defaultValue={String(program.minRedeemPoints)} min={0} />
-          <s-text-field name="codePrefix" label="Discount code prefix" defaultValue={program.codePrefix} details="Generated codes look like RW-7K2M9QX" />
-        </s-section>
+            <Card icon="🏷️" title="Redeeming" sub="What a point is worth when spent, and how reward codes look.">
+              <div className="st-grid">
+                <Field label="Point value" unit="¢" hint={perDollar ? `${perDollar.toLocaleString()} ${pn} = $1` : ""}><input name="pointValueCents" type="number" step="0.25" min="0.01" required defaultValue={program.pointValueCents} onInput={(e) => setCents(Number(e.currentTarget.value))} /></Field>
+                <Field label="Minimum to redeem" unit={pn}><input name="minRedeemPoints" type="number" min="0" defaultValue={program.minRedeemPoints} /></Field>
+                <Field label="Code prefix" hint="Codes look like RW-7K2M9QX"><input className="txt" name="codePrefix" defaultValue={program.codePrefix} maxLength={6} style={{ textTransform: "uppercase" }} /></Field>
+              </div>
+            </Card>
+          </div>
 
-        <s-section>
-          <s-button type="submit" variant="primary" loading={saving}>Save settings</s-button>
-        </s-section>
+          <aside className="st-side">
+            <div className="st-tagcard">
+              <Ribbon>At a glance</Ribbon>
+              <div className="st-big">{earned.toLocaleString()}<small>{pn}</small></div>
+              <div className="st-cap">earned on a $100 order</div>
+              <div className="st-worth">Worth <b>${back.toFixed(2)}</b> back</div>
+              <div className="st-facts">
+                <div><span>Return to customer</span><b>{earned > 0 ? back.toFixed(1) : "0"}%</b></div>
+                <div><span>Status</span><b style={{ color: active ? "#c60d11" : "#666" }}>{active ? "Live" : "Paused"}</b></div>
+                <div><span>Hold / expiry</span><b>{program.holdDays}d / {program.expiryMonths ? `${program.expiryMonths}mo` : "never"}</b></div>
+              </div>
+              <button className="st-save" type="submit" disabled={saving}>{saving ? "Saving…" : "Save settings"}</button>
+              <div className="st-note">Applies to new orders and redemptions from the moment you save.</div>
+            </div>
+          </aside>
+        </div>
       </Form>
     </s-page>
   );

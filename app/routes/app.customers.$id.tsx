@@ -1,5 +1,5 @@
 import type { LoaderFunctionArgs, ActionFunctionArgs, HeadersFunction } from "react-router";
-import { Form, useLoaderData, useActionData } from "react-router";
+import { Form, Link, useLoaderData, useActionData } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
@@ -7,6 +7,7 @@ import { recalcCustomer, syncCustomerMetafields } from "../lib/rewards/customers
 import { redeemReward, reverseRedemption, RedeemError } from "../lib/rewards/redeem.server";
 import { useActionToast } from "../lib/rewards/use-toast";
 import { fmtDate, fmtInt, fmtMoney, str, num } from "../lib/rewards/format";
+import { Hero, UIStyles, Card, Field, Empty, Pill } from "../lib/rewards/ui";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -73,118 +74,66 @@ export default function CustomerDetail() {
   const result = useActionData<typeof action>();
   useActionToast();
   const name = [c.firstName, c.lastName].filter(Boolean).join(" ") || c.email;
+  const Stat = ({ l, v, hot }: { l: string; v: string; hot?: boolean }) => <div className={`aas-stat${hot ? " hot" : ""}`}><div className="l">{l}</div><div className="v">{v}</div></div>;
   return (
-    <s-page heading={name} inlineSize="large">
+    <s-page inlineSize="large">
+      <UIStyles />
+      <Hero title={name} sub={<>{c.email}{c.tier ? <> · {c.tier.name}</> : null}{shopifyAdminUrl && <> · <a href={shopifyAdminUrl} style={{ color: "#c60d11" }}>Open in Shopify customers</a></>}</>} right={<Link to="/app/customers" className="st-btn secondary sm">← Members</Link>} />
       {result?.error && <s-banner tone="critical" heading="Not applied">{result.error}</s-banner>}
       {result?.ok && <s-banner tone="success" heading="Done">{result.message}</s-banner>}
 
-      <s-grid gridTemplateColumns="repeat(auto-fit, minmax(180px, 1fr))" gap="base">
-        <Stat label="Available" value={fmtInt(c.balance)} />
-        <Stat label="Pending" value={fmtInt(c.pendingBalance)} />
-        <Stat label="Lifetime points" value={fmtInt(c.lifetimePoints)} />
-        <Stat label="Lifetime spend" value={fmtMoney(c.lifetimeSpend)} />
-        <Stat label="Tier" value={c.tier?.name ?? "—"} />
-      </s-grid>
+      <div className="aas-panel">
+        <div className="aas-kpis" style={{ gap: 10 }}>
+          <Stat l="Available" v={fmtInt(c.balance)} hot />
+          <Stat l="Pending" v={fmtInt(c.pendingBalance)} />
+          <Stat l="Lifetime points" v={fmtInt(c.lifetimePoints)} />
+          <Stat l="Lifetime spend" v={fmtMoney(c.lifetimeSpend)} />
+          <Stat l="Tier" v={c.tier?.name ?? "—"} />
+          <Stat l="Birthday" v={c.birthday ? c.birthday.slice(5, 10) : "not set"} />
+        </div>
+        <div className="aas-muted" style={{ marginTop: 10, fontSize: 12 }}>Newsletter bonus: {c.newsletterAwarded ? "granted" : "no"} · Signup bonus: {c.signupAwarded ? "granted" : "no"}</div>
+      </div>
 
-      <s-section heading="Details">
-        <s-paragraph>{c.email}{shopifyAdminUrl && <> · <s-link href={shopifyAdminUrl}>Open in Shopify customers</s-link></>}</s-paragraph>
-        <s-paragraph>Birthday: {c.birthday ? c.birthday.slice(5, 10) : "not set"} · Newsletter bonus: {c.newsletterAwarded ? "granted" : "no"} · Signup bonus: {c.signupAwarded ? "granted" : "no"}</s-paragraph>
-      </s-section>
-
-      <s-grid gridTemplateColumns="repeat(auto-fit, minmax(320px, 1fr))" gap="base">
-        <s-section heading="Adjust points">
-          <Form method="post">
+      <div className="st-grid two" style={{ marginTop: 8 }}>
+        <Card icon="✏️" title="Adjust points" sub="Logged with your name and reason.">
+          <Form method="post" className="st-form">
             <input type="hidden" name="intent" value="adjust" />
-            <s-number-field name="points" label="Points (+ / −)" placeholder="250 or -100" required />
-            <s-text-field name="note" label="Reason (shown in history)" placeholder="Goodwill for delayed order #1234" required />
-            <s-button type="submit" variant="primary">Apply</s-button>
+            <Field label="Points (+ / −)" unit="pts"><input name="points" type="number" placeholder="250 or -100" required /></Field>
+            <div style={{ marginTop: 12 }}><Field label="Reason"><input className="txt" name="note" placeholder="Goodwill for delayed order #1234" required /></Field></div>
+            <div className="st-foot" style={{ marginTop: 14 }}><button className="st-btn primary" type="submit">Apply</button></div>
           </Form>
-        </s-section>
-
-        <s-section heading="Redeem on their behalf">
-          <Form method="post">
+        </Card>
+        <Card icon="🎁" title="Redeem on their behalf" sub="Mints a single-use code locked to this customer and deducts the points.">
+          <Form method="post" className="st-form">
             <input type="hidden" name="intent" value="redeem" />
-            <s-select name="rewardId" label="Reward">
-              {rewards.map((r) => <s-option key={r.id} value={r.id} disabled={r.pointsCost > c.balance}>{r.name} — {fmtInt(r.pointsCost)} pts</s-option>)}
-            </s-select>
-            <s-paragraph>Mints a single-use code locked to this customer and deducts the points. Give them the code in store or by email.</s-paragraph>
-            <s-button type="submit" variant="primary" disabled={rewards.length === 0}>Redeem</s-button>
+            <Field label="Reward"><select name="rewardId">{rewards.map((r) => <option key={r.id} value={r.id} disabled={r.pointsCost > c.balance}>{r.name} — {fmtInt(r.pointsCost)} pts</option>)}</select></Field>
+            <div className="st-foot" style={{ marginTop: 14 }}><button className="st-btn primary" type="submit" disabled={rewards.length === 0}>Redeem</button></div>
           </Form>
-        </s-section>
-      </s-grid>
+        </Card>
+      </div>
 
       {c.redemptions.length > 0 && (
-        <s-section heading="Redemptions" padding="none">
-          <s-table>
-            <s-table-header-row>
-              <s-table-header>When</s-table-header>
-              <s-table-header listSlot="primary">Reward</s-table-header>
-              <s-table-header>Code</s-table-header>
-              <s-table-header format="numeric">Points</s-table-header>
-              <s-table-header>Status</s-table-header>
-              <s-table-header>Expires</s-table-header>
-              <s-table-header></s-table-header>
-            </s-table-header-row>
-            <s-table-body>
-              {c.redemptions.map((r) => (
-                <s-table-row key={r.id}>
-                  <s-table-cell>{fmtDate(r.createdAt)}</s-table-cell>
-                  <s-table-cell>{r.name}</s-table-cell>
-                  <s-table-cell><code>{r.discountCode}</code></s-table-cell>
-                  <s-table-cell>{fmtInt(r.pointsSpent)}</s-table-cell>
-                  <s-table-cell><s-badge tone={r.status === "USED" ? "success" : r.status === "REVERSED" ? "critical" : "info"}>{r.status}</s-badge></s-table-cell>
-                  <s-table-cell>{fmtDate(r.expiresAt)}</s-table-cell>
-                  <s-table-cell>
-                    {r.status !== "REVERSED" && (
-                      <Form method="post" onSubmit={(e) => { if (!confirm(`Reverse ${r.discountCode}? Points are returned and the code is deactivated.`)) e.preventDefault(); }}>
-                        <input type="hidden" name="intent" value="reverse" /><input type="hidden" name="redemptionId" value={r.id} />
-                        <s-button type="submit" tone="critical" variant="tertiary">Reverse</s-button>
-                      </Form>
-                    )}
-                  </s-table-cell>
-                </s-table-row>
-              ))}
-            </s-table-body>
-          </s-table>
-        </s-section>
+        <Card icon="🧺" title="Redemptions" sub={`${c.redemptions.length} most recent`}>
+          <div className="aas-tblwrap"><table className="aas-tbl"><thead><tr><th>When</th><th>Reward</th><th>Code</th><th className="num">Points</th><th>Status</th><th>Expires</th><th></th></tr></thead><tbody>
+            {c.redemptions.map((r) => (
+              <tr key={r.id}><td className="dim" style={{ whiteSpace: "nowrap" }}>{fmtDate(r.createdAt)}</td><td>{r.name}</td><td><code>{r.discountCode}</code></td><td className="num">{fmtInt(r.pointsSpent)}</td>
+                <td><Pill tone={r.status === "USED" ? "ok" : r.status === "REVERSED" ? "neg" : "info"}>{r.status}</Pill></td><td className="dim">{fmtDate(r.expiresAt)}</td>
+                <td>{r.status !== "REVERSED" && <Form method="post" onSubmit={(e) => { if (!confirm(`Reverse ${r.discountCode}? Points are returned and the code is deactivated.`)) e.preventDefault(); }}><input type="hidden" name="intent" value="reverse" /><input type="hidden" name="redemptionId" value={r.id} /><button className="st-btn danger sm" type="submit">Reverse</button></Form>}</td></tr>
+            ))}
+          </tbody></table></div>
+        </Card>
       )}
 
-      <s-section heading="History" padding="none">
-        <s-table>
-          <s-table-header-row>
-            <s-table-header>When</s-table-header>
-            <s-table-header>Type</s-table-header>
-            <s-table-header format="numeric">Points</s-table-header>
-            <s-table-header>Status</s-table-header>
-            <s-table-header listSlot="primary">Note</s-table-header>
-            <s-table-header>Order</s-table-header>
-            <s-table-header>By</s-table-header>
-          </s-table-header-row>
-          <s-table-body>
+      <Card icon="📋" title="History" sub={`${c.ledger.length} most recent entries`}>
+        {c.ledger.length === 0 ? <Empty>No activity yet.</Empty> : (
+          <div className="aas-tblwrap"><table className="aas-tbl"><thead><tr><th>When</th><th>Type</th><th className="num">Points</th><th>Status</th><th>Note</th><th>Order</th><th>By</th></tr></thead><tbody>
             {c.ledger.map((l) => (
-              <s-table-row key={l.id}>
-                <s-table-cell>{fmtDate(l.createdAt)}</s-table-cell>
-                <s-table-cell><s-badge tone={l.points < 0 ? "critical" : "success"}>{l.type}</s-badge></s-table-cell>
-                <s-table-cell>{l.points > 0 ? `+${fmtInt(l.points)}` : fmtInt(l.points)}</s-table-cell>
-                <s-table-cell>{l.status}{l.status === "PENDING" && l.availableAt ? ` until ${fmtDate(l.availableAt)}` : ""}</s-table-cell>
-                <s-table-cell>{l.note ?? ""}</s-table-cell>
-                <s-table-cell>{l.orderName ?? ""}</s-table-cell>
-                <s-table-cell>{l.staffEmail ?? ""}</s-table-cell>
-              </s-table-row>
+              <tr key={l.id}><td className="dim" style={{ whiteSpace: "nowrap" }}>{fmtDate(l.createdAt)}</td><td><Pill tone={l.points < 0 ? "neg" : "ok"}>{l.type}</Pill></td><td className="num"><b>{l.points > 0 ? `+${fmtInt(l.points)}` : fmtInt(l.points)}</b></td><td className="dim">{l.status}{l.status === "PENDING" && l.availableAt ? ` until ${fmtDate(l.availableAt)}` : ""}</td><td className="dim">{l.note ?? ""}</td><td>{l.orderName ?? ""}</td><td className="dim">{l.staffEmail ?? ""}</td></tr>
             ))}
-          </s-table-body>
-        </s-table>
-      </s-section>
+          </tbody></table></div>
+        )}
+      </Card>
     </s-page>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <s-box padding="base" background="subdued" border="base" borderRadius="base">
-      <s-text color="subdued">{label}</s-text>
-      <s-heading>{value}</s-heading>
-    </s-box>
   );
 }
 

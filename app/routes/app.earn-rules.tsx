@@ -5,8 +5,9 @@ import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { useActionToast } from "../lib/rewards/use-toast";
 import { num, bool } from "../lib/rewards/format";
-import { Hero, UIStyles, Tabs, EARN_TABS, SETTINGS_TABS } from "../lib/rewards/ui";
+import { Hero, UIStyles, Tabs, EARN_TABS, Card, Field, Chip } from "../lib/rewards/ui";
 
+const ICONS: Record<string, string> = { SIGNUP: "🧷", NEWSLETTER: "✉️", BIRTHDAY: "🎂", REVIEW: "⭐", REFERRAL_REFERRER: "🧵", REFERRAL_FRIEND: "🪡" };
 const EVENTS = [
   { event: "SIGNUP", label: "Create an account", hint: "Awarded once when a customer registers." },
   { event: "NEWSLETTER", label: "Subscribe to newsletter", hint: "Awarded once when email marketing consent becomes subscribed (any source, including the pop-up)." },
@@ -45,22 +46,21 @@ export default function EarnRules() {
   return (
     <s-page inlineSize="large">
       <UIStyles />
-      <Hero title="Earn & Redeem" sub={"How members earn bonus points beyond purchases"} />
+      <Hero title="Earn & Redeem" sub="How members earn bonus points beyond purchases" />
       <Tabs items={EARN_TABS} active="earn" />
       <Form method="post">
-        <s-section heading="Bonus events">
-          {EVENTS.map(({ event, label, hint }) => (
-            <s-box key={event} padding="base" border="base" borderRadius="base">
-              <s-grid gridTemplateColumns="1fr auto" gap="base" alignItems="end">
-                <s-number-field name={`points_${event}`} label={label} details={hint} defaultValue={String(byEvent[event]?.points ?? 0)} min={0} />
-                <s-checkbox name={`active_${event}`} label="Active" defaultChecked={byEvent[event]?.active ?? false} />
-              </s-grid>
-            </s-box>
-          ))}
-        </s-section>
-        <s-section>
-          <s-button type="submit" variant="primary">Save</s-button>
-        </s-section>
+        <Card icon="🪡" title="Bonus ways to earn" sub="Purchases earn at the rate in Settings. These are the extras — set the points and switch each one on or off.">
+          <div className="st-rows">
+            {EVENTS.map(({ event, label, hint }) => (
+              <div className="st-row" key={event}>
+                <div><div className="ttl">{ICONS[event]} {label}</div><div className="dsc">{hint}</div></div>
+                <Field label="Points"><input name={`points_${event}`} type="number" min="0" defaultValue={byEvent[event]?.points ?? 0} /></Field>
+                <div style={{ paddingBottom: 2 }}><Chip name={`active_${event}`} label="Active" defaultChecked={byEvent[event]?.active ?? false} /></div>
+              </div>
+            ))}
+          </div>
+          <div className="st-foot" style={{ marginTop: 16 }}><button className="st-btn primary" type="submit">Save</button></div>
+        </Card>
       </Form>
     </s-page>
   );

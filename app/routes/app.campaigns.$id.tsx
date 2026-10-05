@@ -1,12 +1,12 @@
 import { useState } from "react";
 import type { LoaderFunctionArgs, ActionFunctionArgs, HeadersFunction } from "react-router";
-import { Form, useLoaderData } from "react-router";
+import { Form, Link, useLoaderData } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { useActionToast } from "../lib/rewards/use-toast";
 import { str, num, bool, fmtInt, fmtDate } from "../lib/rewards/format";
-import { Hero, UIStyles, Tabs, EARN_TABS, SETTINGS_TABS } from "../lib/rewards/ui";
+import { Hero, UIStyles, Tabs, EARN_TABS, Card, Field, Chip, Empty, Pill } from "../lib/rewards/ui";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -75,6 +75,8 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
 
 const TYPE_LABEL: Record<string, string> = { PERCENT_OFF: "% off", AMOUNT_OFF: "$ off", FREE_SHIPPING: "Free shipping", POINTS: "Points", NOTHING: "No prize" };
 
+const PTYPE: Record<string, string> = { PERCENT_OFF: "% off", AMOUNT_OFF: "$ off", FREE_SHIPPING: "Free shipping", POINTS: "Points", NOTHING: "No prize" };
+
 export default function CampaignEditor() {
   const { campaign: c, prizes, stats, recent } = useLoaderData<typeof loader>();
   useActionToast();
@@ -85,137 +87,81 @@ export default function CampaignEditor() {
   return (
     <s-page inlineSize="large">
       <UIStyles />
-      <Hero title="Earn & Redeem" sub={`Campaign: ${c.name}`} />
+      <Hero title="Earn & Redeem" sub={<>Campaign: <b>{c.name}</b> · {c.active ? "live" : "paused"} · {fmtInt(stats.plays)} plays</>} />
       <Tabs items={EARN_TABS} active="campaigns" />
-      {!c.active && <s-banner tone="info" heading="Paused">This campaign isn't showing to customers. Switch it to Live from the Campaigns list when the prizes look right.</s-banner>}
-      <s-grid gridTemplateColumns="repeat(auto-fit, minmax(180px, 1fr))" gap="base">
-        <Stat label="Plays" value={fmtInt(stats.plays)} />
-        <Stat label="Type" value={c.kind === "WHEEL" ? "Spin wheel" : c.kind === "SCRATCH" ? "Scratch card" : "Instant win"} />
-        <Stat label="Status" value={c.active ? "Live" : "Paused"} />
-      </s-grid>
+      <div style={{ margin: "4px 0 10px" }}><Link to="/app/campaigns" className="st-btn ghost">← All campaigns</Link></div>
 
-      <s-section heading="Prizes" padding="none">
-        <s-table>
-          <s-table-header-row>
-            <s-table-header listSlot="primary">Prize</s-table-header>
-            <s-table-header>Type</s-table-header>
-            <s-table-header format="numeric">Value</s-table-header>
-            <s-table-header format="numeric">Weight</s-table-header>
-            <s-table-header format="numeric">Odds</s-table-header>
-            <s-table-header format="numeric">Min order</s-table-header>
-            <s-table-header format="numeric">Code days</s-table-header>
-            <s-table-header format="numeric">Won</s-table-header>
-            <s-table-header></s-table-header>
-          </s-table-header-row>
-          <s-table-body>
+      <Card icon="🎟️" title="Prizes" sub="Odds = this prize's weight ÷ total weight. A 'No prize' slice keeps the wheel honest and costs nothing.">
+        {prizes.length === 0 ? <Empty>No prizes yet.</Empty> : (
+          <div className="st-list" style={{ marginBottom: 18 }}>
             {prizes.map((p) => (
-              <s-table-row key={p.id}>
-                <s-table-cell><s-stack direction="inline" gap="small" alignItems="center">{p.color && <span style={{ display: "inline-block", width: 12, height: 12, borderRadius: 3, background: p.color }} />}{p.label}</s-stack></s-table-cell>
-                <s-table-cell>{TYPE_LABEL[p.type]}</s-table-cell>
-                <s-table-cell>{p.type === "PERCENT_OFF" ? `${p.value}%` : p.type === "AMOUNT_OFF" ? `$${p.value}` : p.type === "POINTS" ? fmtInt(p.value ?? 0) : "—"}</s-table-cell>
-                <s-table-cell>{p.weight}</s-table-cell>
-                <s-table-cell>{p.odds}%</s-table-cell>
-                <s-table-cell>{p.minOrderSubtotal ? `$${p.minOrderSubtotal}` : "—"}</s-table-cell>
-                <s-table-cell>{p.codeValidDays}</s-table-cell>
-                <s-table-cell>{p.plays}</s-table-cell>
-                <s-table-cell>
-                  <s-stack direction="inline" gap="small">
-                    <s-button type="button" variant="tertiary" onClick={() => { setEditing(p); setType(p.type); }}>Edit</s-button>
-                    <Form method="post"><input type="hidden" name="intent" value="prize-delete" /><input type="hidden" name="prizeId" value={p.id} />
-                      <s-button type="submit" tone="critical" variant="tertiary">Delete</s-button></Form>
-                  </s-stack>
-                </s-table-cell>
-              </s-table-row>
+              <div key={p.id} className="st-item">
+                <div className="ic" style={p.color ? { background: p.color, borderColor: p.color, color: "#fff" } : undefined}>{p.type === "NOTHING" ? "✖" : "🎁"}</div>
+                <div>
+                  <div className="ttl">{p.label} <Pill tone="info">{p.odds}% odds</Pill></div>
+                  <div className="meta"><span>{PTYPE[p.type]}{p.type === "PERCENT_OFF" ? ` ${p.value}%` : p.type === "AMOUNT_OFF" ? ` $${p.value}` : p.type === "POINTS" ? ` ${fmtInt(p.value ?? 0)}` : ""}</span><span>·</span><span>weight {p.weight}</span>{p.minOrderSubtotal ? <><span>·</span><span>min order ${p.minOrderSubtotal}</span></> : null}<span>·</span><span>code valid {p.codeValidDays}d</span><span>·</span><b>won {p.plays}×</b></div>
+                </div>
+                <div className="acts">
+                  <button className="st-btn secondary sm" type="button" onClick={() => { setEditing(p); setType(p.type); }}>Edit</button>
+                  <Form method="post"><input type="hidden" name="intent" value="prize-delete" /><input type="hidden" name="prizeId" value={p.id} /><button className="st-btn danger sm" type="submit">Delete</button></Form>
+                </div>
+              </div>
             ))}
-          </s-table-body>
-        </s-table>
-      </s-section>
-
-      <s-section heading={e ? `Edit prize: ${e.label}` : "Add a prize"}>
-        <s-paragraph>Odds = this prize's weight ÷ total weight. A "No prize" slice keeps the wheel honest and costs nothing.</s-paragraph>
-        <Form method="post" key={e?.id ?? "new"}>
-          <input type="hidden" name="intent" value="prize" />
-          <input type="hidden" name="prizeId" value={e?.id ?? ""} />
-          <s-grid gridTemplateColumns="repeat(auto-fit, minmax(150px, 1fr))" gap="base">
-            <s-text-field name="label" label="Label (shown on wheel)" defaultValue={e?.label ?? ""} placeholder="15% off" required />
-            <s-select name="type" label="Type" value={type} onChange={(ev: any) => setType(ev.currentTarget.value)}>
-              <s-option value="PERCENT_OFF">% off</s-option>
-              <s-option value="AMOUNT_OFF">$ off</s-option>
-              <s-option value="FREE_SHIPPING">Free shipping</s-option>
-              <s-option value="POINTS">Points</s-option>
-              <s-option value="NOTHING">No prize</s-option>
-            </s-select>
-            {["PERCENT_OFF", "AMOUNT_OFF", "POINTS"].includes(type) && <s-number-field name="value" label={type === "PERCENT_OFF" ? "Percent" : type === "AMOUNT_OFF" ? "Amount ($)" : "Points"} defaultValue={String(e?.value ?? (type === "POINTS" ? 100 : 10))} min={0} />}
-            <s-number-field name="weight" label="Weight (odds)" defaultValue={String(e?.weight ?? 10)} min={0} />
-            <s-number-field name="codeValidDays" label="Code valid (days)" defaultValue={String(e?.codeValidDays ?? 14)} min={1} />
-            <s-number-field name="minOrderSubtotal" label="Min order ($)" defaultValue={String(e?.minOrderSubtotal ?? 0)} min={0} />
-            <s-text-field name="color" label="Slice colour (hex)" defaultValue={e?.color ?? ""} placeholder="#c60d11" />
-            <s-number-field name="sortOrder" label="Order" defaultValue={String(e?.sortOrder ?? prizes.length)} />
-          </s-grid>
-          <s-stack direction="inline" gap="base">
-            <s-button type="submit" variant="primary">{e ? "Save prize" : "Add prize"}</s-button>
-            {e && <s-button type="button" onClick={() => setEditing(null)}>Cancel</s-button>}
-          </s-stack>
+          </div>
+        )}
+        <div className="aas-h">{e ? `Edit prize: ${e.label}` : "Add a prize"}</div>
+        <Form method="post" key={e?.id ?? "new"} className="st-form">
+          <input type="hidden" name="intent" value="prize" /><input type="hidden" name="prizeId" value={e?.id ?? ""} />
+          <div className="st-grid">
+            <Field label="Label (shown on wheel)"><input className="txt" name="label" defaultValue={e?.label ?? ""} placeholder="15% off" required /></Field>
+            <Field label="Type"><select name="type" value={type} onChange={(ev) => setType(ev.target.value)}><option value="PERCENT_OFF">% off</option><option value="AMOUNT_OFF">$ off</option><option value="FREE_SHIPPING">Free shipping</option><option value="POINTS">Points</option><option value="NOTHING">No prize</option></select></Field>
+            {["PERCENT_OFF", "AMOUNT_OFF", "POINTS"].includes(type) ? <Field label={type === "PERCENT_OFF" ? "Percent" : type === "AMOUNT_OFF" ? "Amount" : "Points"} unit={type === "PERCENT_OFF" ? "%" : type === "AMOUNT_OFF" ? "$" : "pts"}><input name="value" type="number" min="0" defaultValue={e?.value ?? (type === "POINTS" ? 100 : 10)} /></Field> : <Field label="Weight (odds)"><input name="weight" type="number" min="0" defaultValue={e?.weight ?? 10} /></Field>}
+          </div>
+          <div className="st-grid">
+            {["PERCENT_OFF", "AMOUNT_OFF", "POINTS"].includes(type) && <Field label="Weight (odds)"><input name="weight" type="number" min="0" defaultValue={e?.weight ?? 10} /></Field>}
+            <Field label="Code valid" unit="days"><input name="codeValidDays" type="number" min="1" defaultValue={e?.codeValidDays ?? 14} /></Field>
+            <Field label="Min order" unit="$"><input name="minOrderSubtotal" type="number" min="0" defaultValue={e?.minOrderSubtotal ?? 0} /></Field>
+            <Field label="Slice colour" hint="blank = red/blush pattern"><input className="txt" name="color" defaultValue={e?.color ?? ""} placeholder="#c60d11" /></Field>
+            <Field label="Order"><input name="sortOrder" type="number" defaultValue={e?.sortOrder ?? prizes.length} /></Field>
+          </div>
+          <div className="st-foot">
+            <button className="st-btn primary" type="submit">{e ? "Save prize" : "Add prize"}</button>
+            {e && <button className="st-btn ghost" type="button" onClick={() => setEditing(null)}>Cancel</button>}
+          </div>
         </Form>
-      </s-section>
+      </Card>
 
-      <s-section heading="Appearance & behaviour">
-        <Form method="post">
+      <Card icon="🎨" title="Appearance & behaviour" sub="Copy, colour, timing and where it shows.">
+        <Form method="post" className="st-form">
           <input type="hidden" name="intent" value="campaign" />
-          <s-grid gridTemplateColumns="repeat(auto-fit, minmax(220px, 1fr))" gap="base">
-            <s-text-field name="name" label="Name (internal)" defaultValue={c.name} />
-            <s-text-field name="headline" label="Headline" defaultValue={c.headline} />
-            <s-text-field name="subheadline" label="Sub-headline" defaultValue={c.subheadline} />
-            <s-text-field name="buttonLabel" label="Button label" defaultValue={c.buttonLabel} />
-            <s-text-field name="primaryColor" label="Accent colour (hex)" defaultValue={c.primaryColor} />
-            <s-number-field name="showDelaySeconds" label="Show after (seconds)" defaultValue={String(c.showDelaySeconds)} min={0} />
-            <s-select name="showOnPages" label="Show on" defaultValue={c.showOnPages}>
-              <s-option value="home">Home page only</s-option>
-              <s-option value="all">All pages</s-option>
-              <s-option value="collection">Collection pages</s-option>
-              <s-option value="product">Product pages</s-option>
-            </s-select>
-            <s-date-field name="startsAt" label="Starts (optional)" defaultValue={c.startsAt} />
-            <s-date-field name="endsAt" label="Ends (optional)" defaultValue={c.endsAt} />
-          </s-grid>
-          <s-checkbox name="requireEmail" label="Require email to play (recommended — subscribes them and awards newsletter points)" defaultChecked={c.requireEmail} />
-          <s-checkbox name="onePlayPerEmail" label="One play per email" defaultChecked={c.onePlayPerEmail} />
-          <s-button type="submit" variant="primary">Save campaign</s-button>
+          <div className="st-grid">
+            <Field label="Name (internal)"><input className="txt" name="name" defaultValue={c.name} /></Field>
+            <Field label="Headline"><input className="txt" name="headline" defaultValue={c.headline} /></Field>
+            <Field label="Button label"><input className="txt" name="buttonLabel" defaultValue={c.buttonLabel} /></Field>
+          </div>
+          <div className="st-grid two"><Field label="Sub-headline"><input className="txt" name="subheadline" defaultValue={c.subheadline} /></Field><Field label="Accent colour"><input className="txt" name="primaryColor" defaultValue={c.primaryColor} /></Field></div>
+          <div className="st-grid">
+            <Field label="Show after" unit="seconds"><input name="showDelaySeconds" type="number" min="0" defaultValue={c.showDelaySeconds} /></Field>
+            <Field label="Show on"><select name="showOnPages" defaultValue={c.showOnPages}><option value="home">Home page only</option><option value="all">All pages</option><option value="collection">Collection pages</option><option value="product">Product pages</option></select></Field>
+            <Field label="Starts" hint="optional"><input name="startsAt" type="date" defaultValue={c.startsAt} /></Field>
+            <Field label="Ends" hint="optional"><input name="endsAt" type="date" defaultValue={c.endsAt} /></Field>
+          </div>
+          <div className="st-chips" style={{ marginTop: 4, marginBottom: 16 }}>
+            <Chip name="requireEmail" label="Require email to play (subscribes + newsletter points)" defaultChecked={c.requireEmail} />
+            <Chip name="onePlayPerEmail" label="One play per email" defaultChecked={c.onePlayPerEmail} />
+          </div>
+          <div className="st-foot"><button className="st-btn primary" type="submit">Save campaign</button></div>
         </Form>
-      </s-section>
+      </Card>
 
       {recent.length > 0 && (
-        <s-section heading="Recent plays" padding="none">
-          <s-table>
-            <s-table-header-row>
-              <s-table-header>When</s-table-header>
-              <s-table-header listSlot="primary">Email</s-table-header>
-              <s-table-header>Prize</s-table-header>
-              <s-table-header>Code</s-table-header>
-            </s-table-header-row>
-            <s-table-body>
-              {recent.map((r) => (
-                <s-table-row key={r.id}>
-                  <s-table-cell>{fmtDate(r.createdAt)}</s-table-cell>
-                  <s-table-cell>{r.email.includes("@") ? r.email : "(anonymous)"}</s-table-cell>
-                  <s-table-cell>{r.prize}</s-table-cell>
-                  <s-table-cell>{r.code ? <code>{r.code}</code> : "—"}</s-table-cell>
-                </s-table-row>
-              ))}
-            </s-table-body>
-          </s-table>
-        </s-section>
+        <Card icon="📋" title="Recent plays" sub={`last ${recent.length}`}>
+          <div className="aas-tblwrap"><table className="aas-tbl"><thead><tr><th>When</th><th>Email</th><th>Prize</th><th>Code</th></tr></thead><tbody>
+            {recent.map((r) => <tr key={r.id}><td className="dim" style={{ whiteSpace: "nowrap" }}>{fmtDate(r.createdAt)}</td><td>{r.email.includes("@") ? r.email : "(anonymous)"}</td><td>{r.prize}</td><td>{r.code ? <code>{r.code}</code> : "—"}</td></tr>)}
+          </tbody></table></div>
+        </Card>
       )}
     </s-page>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <s-box padding="base" background="subdued" border="base" borderRadius="base">
-      <s-text color="subdued">{label}</s-text>
-      <s-heading>{value}</s-heading>
-    </s-box>
   );
 }
 

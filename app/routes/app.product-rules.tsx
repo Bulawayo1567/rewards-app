@@ -7,7 +7,7 @@ import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { useActionToast } from "../lib/rewards/use-toast";
 import { str, num } from "../lib/rewards/format";
-import { Hero, UIStyles, Tabs, EARN_TABS, SETTINGS_TABS } from "../lib/rewards/ui";
+import { Hero, UIStyles, Tabs, EARN_TABS, Card, Field, Empty, Pill } from "../lib/rewards/ui";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -48,24 +48,21 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 const MODE_LABEL: Record<string, string> = { EXCLUDE: "Excluded", MULTIPLIER: "Multiplier", FIXED_BONUS: "Bonus points" };
 
+const TARGET_LABEL: Record<string, string> = { VENDOR: "Brand", TAG: "Tag", PRODUCT_TYPE: "Product type", COLLECTION: "Collection", PRODUCT: "Product", VARIANT: "Variant" };
+
 export default function ProductRules() {
   const { rules } = useLoaderData<typeof loader>();
   const result = useActionData<typeof action>();
   const shopify = useAppBridge();
+  useActionToast();
   const [editing, setEditing] = useState<(typeof rules)[number] | null>(null);
   const [target, setTarget] = useState("VENDOR");
   const [mode, setMode] = useState("EXCLUDE");
   const [picked, setPicked] = useState<{ id: string; label: string } | null>(null);
   const e = editing;
-  useActionToast();
-  useEffect(() => { if (result && "ok" in result && result.ok && editing) cancel(); }, [result]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const startEdit = (r: (typeof rules)[number]) => {
-    setEditing(r); setTarget(r.target); setMode(r.mode);
-    setPicked(["PRODUCT", "VARIANT", "COLLECTION"].includes(r.target) ? { id: r.targetId, label: r.targetLabel } : null);
-  };
+  const startEdit = (r: (typeof rules)[number]) => { setEditing(r); setTarget(r.target); setMode(r.mode); setPicked(["PRODUCT", "VARIANT", "COLLECTION"].includes(r.target) ? { id: r.targetId, label: r.targetLabel } : null); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const cancel = () => { setEditing(null); setTarget("VENDOR"); setMode("EXCLUDE"); setPicked(null); };
-
+  useEffect(() => { if (result && "ok" in result && result.ok && editing) cancel(); }, [result]); // eslint-disable-line react-hooks/exhaustive-deps
   const pick = async () => {
     const type = target === "COLLECTION" ? "collection" : target === "VARIANT" ? "variant" : "product";
     const sel = await shopify.resourcePicker({ type, multiple: false, action: "select" });
@@ -77,100 +74,65 @@ export default function ProductRules() {
   return (
     <s-page inlineSize="large">
       <UIStyles />
-      <Hero title="Earn & Redeem" sub={"Exclude products from earning, or boost them with multipliers and bonuses"} />
+      <Hero title="Earn & Redeem" sub="Exclude products from earning, or boost them with multipliers and bonuses" />
       <Tabs items={EARN_TABS} active="rules" />
       {result && "error" in result && result.error && <s-banner tone="critical" heading="Not saved">{result.error}</s-banner>}
 
-      <s-section heading="Rules" padding="none">
-        <s-table>
-          <s-table-header-row>
-            <s-table-header>Mode</s-table-header>
-            <s-table-header>Applies to</s-table-header>
-            <s-table-header listSlot="primary">Target</s-table-header>
-            <s-table-header format="numeric">Value</s-table-header>
-            <s-table-header format="numeric">Priority</s-table-header>
-            <s-table-header>Window</s-table-header>
-            <s-table-header>Status</s-table-header>
-            <s-table-header></s-table-header>
-          </s-table-header-row>
-          <s-table-body>
-            {rules.map((r) => (
-              <s-table-row key={r.id}>
-                <s-table-cell><s-badge tone={r.mode === "EXCLUDE" ? "critical" : "success"}>{MODE_LABEL[r.mode]}</s-badge></s-table-cell>
-                <s-table-cell>{r.target.replace("_", " ").toLowerCase()}</s-table-cell>
-                <s-table-cell>{r.targetLabel}</s-table-cell>
-                <s-table-cell>{r.mode === "EXCLUDE" ? "—" : r.mode === "MULTIPLIER" ? `${r.value}×` : `+${r.value}/unit`}</s-table-cell>
-                <s-table-cell>{r.priority}</s-table-cell>
-                <s-table-cell>{r.startsAt || r.endsAt ? `${r.startsAt || "…"} → ${r.endsAt || "…"}` : "always"}</s-table-cell>
-                <s-table-cell>
-                  <Form method="post"><input type="hidden" name="intent" value="toggle" /><input type="hidden" name="id" value={r.id} />
-                    <s-button type="submit" variant="tertiary">{r.active ? "Active" : "Paused"}</s-button></Form>
-                </s-table-cell>
-                <s-table-cell>
-                  <s-stack direction="inline" gap="small">
-                    <s-button type="button" variant="tertiary" onClick={() => startEdit(r)}>Edit</s-button>
-                    <Form method="post" onSubmit={(ev) => { if (!confirm(`Delete rule for "${r.targetLabel}"?`)) ev.preventDefault(); }}>
-                      <input type="hidden" name="intent" value="delete" /><input type="hidden" name="id" value={r.id} />
-                      <s-button type="submit" tone="critical" variant="tertiary">Delete</s-button>
-                    </Form>
-                  </s-stack>
-                </s-table-cell>
-              </s-table-row>
-            ))}
-            {rules.length === 0 && <s-table-row><s-table-cell>No rules — every product earns the base rate.</s-table-cell></s-table-row>}
-          </s-table-body>
-        </s-table>
-      </s-section>
-
-      <s-section heading={e ? `Edit rule: ${e.targetLabel}` : "Add a rule"}>
-        <s-paragraph>
-          <b>Excluded</b> always wins. If several <b>Multiplier</b> rules match, the highest priority applies (ties: the bigger multiplier).
-          <b>Bonus points</b> rules stack on top.
-        </s-paragraph>
-        <Form method="post" key={e?.id ?? "new"}>
+      <Card icon={e ? "✏️" : "📏"} title={e ? `Edit rule: ${e.targetLabel}` : "Add a rule"} sub="Excluded always wins. Among multipliers the highest priority applies; bonus points stack on top.">
+        <Form method="post" key={e?.id ?? "new"} className="st-form">
           <input type="hidden" name="id" value={e?.id ?? ""} />
-          <s-grid gridTemplateColumns="repeat(auto-fit, minmax(180px, 1fr))" gap="base">
-            <s-select name="target" label="Applies to" value={target} onChange={(ev: any) => { setTarget(ev.currentTarget.value); setPicked(null); }}>
-              <s-option value="VENDOR">Vendor / brand</s-option>
-              <s-option value="TAG">Product tag</s-option>
-              <s-option value="PRODUCT_TYPE">Product type</s-option>
-              <s-option value="COLLECTION">Collection</s-option>
-              <s-option value="PRODUCT">Single product</s-option>
-              <s-option value="VARIANT">Single variant</s-option>
-            </s-select>
-            <s-select name="mode" label="Rule" value={mode} onChange={(ev: any) => setMode(ev.currentTarget.value)}>
-              <s-option value="EXCLUDE">Excluded — earns nothing</s-option>
-              <s-option value="MULTIPLIER">Multiplier (e.g. 2 = double)</s-option>
-              <s-option value="FIXED_BONUS">Bonus points per unit</s-option>
-            </s-select>
-            {mode !== "EXCLUDE" && <s-number-field name="value" label={mode === "MULTIPLIER" ? "Multiplier" : "Bonus points"} defaultValue={String(e?.value ?? (mode === "MULTIPLIER" ? 2 : 50))} step={mode === "MULTIPLIER" ? 0.25 : 1} min={0} />}
-            <s-number-field name="priority" label="Priority" defaultValue={String(e?.priority ?? 0)} details="Higher wins" />
-            <s-date-field name="startsAt" label="Starts (optional)" defaultValue={e?.startsAt ?? ""} />
-            <s-date-field name="endsAt" label="Ends (optional)" defaultValue={e?.endsAt ?? ""} />
-          </s-grid>
-
+          <div className="st-grid">
+            <Field label="Applies to"><select name="target" value={target} onChange={(ev) => { setTarget(ev.target.value); setPicked(null); }}>
+              <option value="VENDOR">Brand / vendor</option><option value="TAG">Product tag</option><option value="PRODUCT_TYPE">Product type</option><option value="COLLECTION">Collection</option><option value="PRODUCT">Single product</option><option value="VARIANT">Single variant</option></select></Field>
+            <Field label="Rule"><select name="mode" value={mode} onChange={(ev) => setMode(ev.target.value)}>
+              <option value="EXCLUDE">Excluded — earns nothing</option><option value="MULTIPLIER">Multiplier</option><option value="FIXED_BONUS">Bonus points per unit</option></select></Field>
+            {mode !== "EXCLUDE" ? <Field label={mode === "MULTIPLIER" ? "Multiplier" : "Bonus"} unit={mode === "MULTIPLIER" ? "×" : "pts / unit"}><input name="value" type="number" min="0" step={mode === "MULTIPLIER" ? "0.25" : "1"} defaultValue={e?.value ?? (mode === "MULTIPLIER" ? 2 : 50)} /></Field> : <Field label="Priority" hint="Higher wins"><input name="priority" type="number" defaultValue={e?.priority ?? 0} /></Field>}
+          </div>
+          <div className="st-grid">
+            {mode !== "EXCLUDE" && <Field label="Priority" hint="Higher wins"><input name="priority" type="number" defaultValue={e?.priority ?? 0} /></Field>}
+            <Field label="Starts" hint="optional"><input name="startsAt" type="date" defaultValue={e?.startsAt ?? ""} /></Field>
+            <Field label="Ends" hint="optional"><input name="endsAt" type="date" defaultValue={e?.endsAt ?? ""} /></Field>
+          </div>
           {needsPicker ? (
-            <s-stack direction="inline" gap="base" alignItems="center">
-              <s-button type="button" onClick={pick}>Choose {target.toLowerCase()}…</s-button>
-              <s-text>{picked ? picked.label : "Nothing selected"}</s-text>
-              <input type="hidden" name="targetId" value={picked?.id ?? ""} />
-              <input type="hidden" name="targetLabel" value={picked?.label ?? ""} />
-            </s-stack>
+            <div className="st-foot" style={{ marginBottom: 14 }}>
+              <button className="st-btn secondary" type="button" onClick={pick}>Choose {target.toLowerCase()}…</button>
+              <span className="aas-muted">{picked ? picked.label : "Nothing selected"}</span>
+              <input type="hidden" name="targetId" value={picked?.id ?? ""} /><input type="hidden" name="targetLabel" value={picked?.label ?? ""} />
+            </div>
           ) : (
-            <s-text-field
-              name="targetId"
-              label={target === "VENDOR" ? "Vendor name (exactly as on the product)" : target === "TAG" ? "Tag" : "Product type"}
-              placeholder={target === "VENDOR" ? "BERNINA" : target === "TAG" ? "clearance" : "Sewing Machine"}
-              defaultValue={e && !["PRODUCT", "VARIANT", "COLLECTION"].includes(e.target) ? e.targetId : ""}
-              required
-            />
+            <div className="st-grid two" style={{ marginBottom: 14 }}>
+              <Field label={target === "VENDOR" ? "Vendor name (exactly as on the product)" : target === "TAG" ? "Tag" : "Product type"}>
+                <input className="txt" name="targetId" placeholder={target === "VENDOR" ? "BERNINA" : target === "TAG" ? "clearance" : "Sewing Machine"} defaultValue={e && !["PRODUCT", "VARIANT", "COLLECTION"].includes(e.target) ? e.targetId : ""} required />
+              </Field>
+            </div>
           )}
-          <s-stack direction="inline" gap="base">
-            <s-button type="submit" variant="primary">{e ? "Save changes" : "Add rule"}</s-button>
-            {e && <s-button type="button" onClick={cancel}>Cancel</s-button>}
-          </s-stack>
+          <div className="st-foot">
+            <button className="st-btn primary" type="submit">{e ? "Save changes" : "Add rule"}</button>
+            {e && <button className="st-btn ghost" type="button" onClick={cancel}>Cancel</button>}
+          </div>
         </Form>
-      </s-section>
+      </Card>
+
+      <Card icon="🧵" title="Rules" sub={`${rules.filter((r) => r.active).length} active · ${rules.length} total`}>
+        {rules.length === 0 ? <Empty>No rules — every product earns the base rate.</Empty> : (
+          <div className="st-list">
+            {rules.map((r) => (
+              <div key={r.id} className={`st-item${r.active ? "" : " off"}`}>
+                <div className="ic">{r.mode === "EXCLUDE" ? "🚫" : r.mode === "MULTIPLIER" ? "✖️" : "➕"}</div>
+                <div>
+                  <div className="ttl">{r.targetLabel} <Pill tone={r.mode === "EXCLUDE" ? "neg" : "ok"}>{r.mode === "EXCLUDE" ? "Excluded" : r.mode === "MULTIPLIER" ? `${r.value}× points` : `+${r.value} / unit`}</Pill> {!r.active && <Pill tone="warn">paused</Pill>}</div>
+                  <div className="meta"><span>{TARGET_LABEL[r.target]}</span><span>·</span><span>priority {r.priority}</span><span>·</span><span>{r.startsAt || r.endsAt ? `${r.startsAt || "…"} → ${r.endsAt || "…"}` : "always"}</span></div>
+                </div>
+                <div className="acts">
+                  <Form method="post"><input type="hidden" name="intent" value="toggle" /><input type="hidden" name="id" value={r.id} /><button className="st-btn secondary sm" type="submit">{r.active ? "Pause" : "Resume"}</button></Form>
+                  <button className="st-btn secondary sm" type="button" onClick={() => startEdit(r)}>Edit</button>
+                  <Form method="post" onSubmit={(ev) => { if (!confirm(`Delete rule for "${r.targetLabel}"?`)) ev.preventDefault(); }}><input type="hidden" name="intent" value="delete" /><input type="hidden" name="id" value={r.id} /><button className="st-btn danger sm" type="submit">Delete</button></Form>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
     </s-page>
   );
 }

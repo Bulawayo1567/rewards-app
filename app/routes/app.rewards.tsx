@@ -7,7 +7,7 @@ import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { useActionToast } from "../lib/rewards/use-toast";
 import { str, num, fmtInt } from "../lib/rewards/format";
-import { Hero, UIStyles, Tabs, EARN_TABS, SETTINGS_TABS } from "../lib/rewards/ui";
+import { Hero, UIStyles, Tabs, EARN_TABS, Card, Field, Empty, Pill } from "../lib/rewards/ui";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -63,115 +63,85 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 const TYPE_LABEL: Record<string, string> = { FIXED_AMOUNT: "$ off", PERCENTAGE: "% off", FREE_SHIPPING: "Free shipping", FREE_PRODUCT: "Free product" };
 
+const TYPE_ICON: Record<string, string> = { FIXED_AMOUNT: "🏷️", PERCENTAGE: "％", FREE_SHIPPING: "📦", FREE_PRODUCT: "🎁" };
+
 export default function Rewards() {
   const { rewards, tiers } = useLoaderData<typeof loader>();
   const result = useActionData<typeof action>();
   const shopify = useAppBridge();
+  useActionToast();
   const [editing, setEditing] = useState<(typeof rewards)[number] | null>(null);
   const [type, setType] = useState("FIXED_AMOUNT");
   const [variant, setVariant] = useState<{ id: string; label: string } | null>(null);
   const e = editing;
-  useActionToast();
-  useEffect(() => { if (result && "ok" in result && result.ok && editing) cancel(); }, [result]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const startEdit = (r: (typeof rewards)[number]) => {
-    setEditing(r); setType(r.type);
-    setVariant(r.variantId ? { id: r.variantId, label: r.variantId.split("/").pop()! } : null);
-  };
+  const startEdit = (r: (typeof rewards)[number]) => { setEditing(r); setType(r.type); setVariant(r.variantId ? { id: r.variantId, label: r.variantId.split("/").pop()! } : null); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const cancel = () => { setEditing(null); setType("FIXED_AMOUNT"); setVariant(null); };
-
+  useEffect(() => { if (result && "ok" in result && result.ok && editing) cancel(); }, [result]); // eslint-disable-line react-hooks/exhaustive-deps
   const pickVariant = async () => {
     const sel = await shopify.resourcePicker({ type: "variant", multiple: false, action: "select" });
     const v = sel?.[0] as any;
     if (v) setVariant({ id: v.id, label: v.displayName ?? v.title ?? v.id });
   };
+  const valueOf = (r: (typeof rewards)[number]) => r.type === "FIXED_AMOUNT" ? `$${r.value} off` : r.type === "PERCENTAGE" ? `${r.value}% off` : r.type === "FREE_SHIPPING" ? "Free shipping" : "Free product";
 
   return (
     <s-page inlineSize="large">
       <UIStyles />
-      <Hero title="Earn & Redeem" sub={"What members can redeem their points for"} />
+      <Hero title="Earn & Redeem" sub="What members can redeem their points for" />
       <Tabs items={EARN_TABS} active="rewards" />
       {result && "error" in result && result.error && <s-banner tone="critical" heading="Not saved">{result.error}</s-banner>}
 
-      <s-section heading="Catalog" padding="none">
-        <s-table>
-          <s-table-header-row>
-            <s-table-header listSlot="primary">Reward</s-table-header>
-            <s-table-header>Type</s-table-header>
-            <s-table-header format="numeric">Points</s-table-header>
-            <s-table-header format="numeric">Value</s-table-header>
-            <s-table-header format="numeric">Min order</s-table-header>
-            <s-table-header>Min tier</s-table-header>
-            <s-table-header format="numeric">Redeemed</s-table-header>
-            <s-table-header>Status</s-table-header>
-            <s-table-header></s-table-header>
-          </s-table-header-row>
-          <s-table-body>
-            {rewards.map((r) => (
-              <s-table-row key={r.id}>
-                <s-table-cell>{r.name}</s-table-cell>
-                <s-table-cell>{TYPE_LABEL[r.type]}</s-table-cell>
-                <s-table-cell>{fmtInt(r.pointsCost)}</s-table-cell>
-                <s-table-cell>{r.type === "FIXED_AMOUNT" ? `$${r.value}` : r.type === "PERCENTAGE" ? `${r.value}%` : "—"}</s-table-cell>
-                <s-table-cell>{r.minOrderSubtotal ? `$${r.minOrderSubtotal}` : "—"}</s-table-cell>
-                <s-table-cell>{r.minTierRank == null ? "any" : tiers.find((t) => t.rank === r.minTierRank)?.name ?? `rank ${r.minTierRank}`}</s-table-cell>
-                <s-table-cell>{r.redemptions}</s-table-cell>
-                <s-table-cell>
-                  <Form method="post"><input type="hidden" name="intent" value="toggle" /><input type="hidden" name="id" value={r.id} />
-                    <s-button type="submit" variant="tertiary">{r.active ? "Active" : "Hidden"}</s-button></Form>
-                </s-table-cell>
-                <s-table-cell>
-                  <s-stack direction="inline" gap="small">
-                    <s-button type="button" variant="tertiary" onClick={() => startEdit(r)}>Edit</s-button>
-                    <Form method="post" onSubmit={(ev) => { if (!confirm(`Delete "${r.name}"?${r.redemptions ? " It has redemptions, so it will be hidden instead of deleted." : ""}`)) ev.preventDefault(); }}>
-                      <input type="hidden" name="intent" value="delete" /><input type="hidden" name="id" value={r.id} />
-                      <s-button type="submit" tone="critical" variant="tertiary">Delete</s-button>
-                    </Form>
-                  </s-stack>
-                </s-table-cell>
-              </s-table-row>
-            ))}
-            {rewards.length === 0 && <s-table-row><s-table-cell>No rewards yet — add one below.</s-table-cell></s-table-row>}
-          </s-table-body>
-        </s-table>
-      </s-section>
-
-      <s-section heading={e ? `Edit reward: ${e.name}` : "Add a reward"}>
-        <Form method="post" key={e?.id ?? "new"}>
+      <Card icon={e ? "✏️" : "🎁"} title={e ? `Edit reward: ${e.name}` : "Add a reward"} sub="Customers pick these from the launcher and their account page. Each redemption mints a single-use code locked to that customer.">
+        <Form method="post" key={e?.id ?? "new"} className="st-form">
           <input type="hidden" name="id" value={e?.id ?? ""} />
-          <s-grid gridTemplateColumns="repeat(auto-fit, minmax(180px, 1fr))" gap="base">
-            <s-text-field name="name" label="Name" placeholder="$10 off your order" defaultValue={e?.name ?? ""} required />
-            <s-select name="type" label="Type" value={type} onChange={(ev: any) => setType(ev.currentTarget.value)}>
-              <s-option value="FIXED_AMOUNT">$ off</s-option>
-              <s-option value="PERCENTAGE">% off</s-option>
-              <s-option value="FREE_SHIPPING">Free shipping</s-option>
-              <s-option value="FREE_PRODUCT">Free product</s-option>
-            </s-select>
-            <s-number-field name="pointsCost" label="Points cost" defaultValue={String(e?.pointsCost ?? 1000)} min={1} />
-            {(type === "FIXED_AMOUNT" || type === "PERCENTAGE") && (
-              <s-number-field name="value" label={type === "FIXED_AMOUNT" ? "Amount ($)" : "Percent"} defaultValue={String(e?.value ?? 10)} min={0} />
-            )}
-            <s-number-field name="minOrderSubtotal" label="Minimum order ($, optional)" defaultValue={String(e?.minOrderSubtotal ?? 0)} min={0} />
-            <s-number-field name="codeValidDays" label="Code valid for (days)" defaultValue={String(e?.codeValidDays ?? 90)} min={1} />
-            <s-select name="minTierRank" label="Minimum tier" defaultValue={e?.minTierRank == null ? "" : String(e.minTierRank)}>
-              <s-option value="">Any</s-option>
-              {tiers.map((t) => <s-option key={t.id} value={String(t.rank)}>{t.name}</s-option>)}
-            </s-select>
-            <s-number-field name="sortOrder" label="Sort order" defaultValue={String(e?.sortOrder ?? 0)} />
-          </s-grid>
+          <div className="st-grid">
+            <Field label="Name"><input className="txt" name="name" placeholder="$10 off your order" defaultValue={e?.name ?? ""} required /></Field>
+            <Field label="Type"><select name="type" value={type} onChange={(ev) => setType(ev.target.value)}>
+              <option value="FIXED_AMOUNT">$ off</option><option value="PERCENTAGE">% off</option><option value="FREE_SHIPPING">Free shipping</option><option value="FREE_PRODUCT">Free product</option></select></Field>
+            <Field label="Points cost" unit="pts"><input name="pointsCost" type="number" min="1" defaultValue={e?.pointsCost ?? 1000} /></Field>
+          </div>
+          <div className="st-grid">
+            {(type === "FIXED_AMOUNT" || type === "PERCENTAGE") && <Field label={type === "FIXED_AMOUNT" ? "Amount" : "Percent"} unit={type === "FIXED_AMOUNT" ? "$" : "%"}><input name="value" type="number" min="0" step="0.5" defaultValue={e?.value ?? 10} /></Field>}
+            <Field label="Minimum order" unit="$" hint="0 = none"><input name="minOrderSubtotal" type="number" min="0" defaultValue={e?.minOrderSubtotal ?? 0} /></Field>
+            <Field label="Code valid for" unit="days"><input name="codeValidDays" type="number" min="1" defaultValue={e?.codeValidDays ?? 90} /></Field>
+            <Field label="Minimum tier"><select name="minTierRank" defaultValue={e?.minTierRank == null ? "" : String(e.minTierRank)}><option value="">Any</option>{tiers.map((t) => <option key={t.id} value={String(t.rank)}>{t.name}</option>)}</select></Field>
+            <Field label="Sort order"><input name="sortOrder" type="number" defaultValue={e?.sortOrder ?? 0} /></Field>
+          </div>
           {type === "FREE_PRODUCT" && (
-            <s-stack direction="inline" gap="base" alignItems="center">
-              <s-button type="button" onClick={pickVariant}>Choose product variant…</s-button>
-              <s-text>{variant?.label ?? "Nothing selected"}</s-text>
+            <div className="st-foot" style={{ marginBottom: 14 }}>
+              <button className="st-btn secondary" type="button" onClick={pickVariant}>Choose product variant…</button>
+              <span className="aas-muted">{variant?.label ?? "Nothing selected"}</span>
               <input type="hidden" name="variantId" value={variant?.id ?? ""} />
-            </s-stack>
+            </div>
           )}
-          <s-stack direction="inline" gap="base">
-            <s-button type="submit" variant="primary">{e ? "Save changes" : "Add reward"}</s-button>
-            {e && <s-button type="button" onClick={cancel}>Cancel</s-button>}
-          </s-stack>
+          <div className="st-foot">
+            <button className="st-btn primary" type="submit">{e ? "Save changes" : "Add reward"}</button>
+            {e && <button className="st-btn ghost" type="button" onClick={cancel}>Cancel</button>}
+          </div>
         </Form>
-      </s-section>
+      </Card>
+
+      <Card icon="🧺" title="Catalog" sub={`${rewards.filter((r) => r.active).length} active · ${rewards.length} total`}>
+        {rewards.length === 0 ? <Empty>No rewards yet — add your first one above.</Empty> : (
+          <div className="st-list">
+            {rewards.map((r) => (
+              <div key={r.id} className={`st-item${r.active ? "" : " off"}`}>
+                <div className="ic">{TYPE_ICON[r.type]}</div>
+                <div>
+                  <div className="ttl">{r.name} {!r.active && <Pill tone="warn">hidden</Pill>}</div>
+                  <div className="meta"><b>{r.pointsCost.toLocaleString()} pts</b><span>·</span><span>{valueOf(r)}</span>{r.minOrderSubtotal ? <><span>·</span><span>min order ${r.minOrderSubtotal}</span></> : null}<span>·</span><span>{r.minTierRank == null ? "any tier" : tiers.find((t) => t.rank === r.minTierRank)?.name ?? `rank ${r.minTierRank}`}</span><span>·</span><span>{r.redemptions} redeemed</span></div>
+                </div>
+                <div className="acts">
+                  <Form method="post"><input type="hidden" name="intent" value="toggle" /><input type="hidden" name="id" value={r.id} /><button className="st-btn secondary sm" type="submit">{r.active ? "Hide" : "Show"}</button></Form>
+                  <button className="st-btn secondary sm" type="button" onClick={() => startEdit(r)}>Edit</button>
+                  <Form method="post" onSubmit={(ev) => { if (!confirm(`Delete "${r.name}"?${r.redemptions ? " It has redemption history, so it will be hidden instead." : ""}`)) ev.preventDefault(); }}>
+                    <input type="hidden" name="intent" value="delete" /><input type="hidden" name="id" value={r.id} /><button className="st-btn danger sm" type="submit">Delete</button></Form>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
     </s-page>
   );
 }

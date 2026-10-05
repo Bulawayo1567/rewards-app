@@ -6,7 +6,7 @@ import prisma from "../db.server";
 import { parseCsv, findCol } from "../lib/rewards/csv";
 import { recalcCustomer, syncCustomerMetafields } from "../lib/rewards/customers.server";
 import { fmtDate, fmtInt, str } from "../lib/rewards/format";
-import { Hero, UIStyles, Tabs, EARN_TABS, SETTINGS_TABS } from "../lib/rewards/ui";
+import { Hero, UIStyles, Tabs, SETTINGS_TABS, Card, Empty } from "../lib/rewards/ui";
 
 interface Row { email: string; points: number; firstName?: string; lastName?: string; smileId?: string }
 
@@ -106,116 +106,68 @@ export default function Import() {
   const nav = useNavigation();
   const busy = nav.state !== "idle";
   const p = result && "preview" in result ? result.preview : null;
+  const Stat = ({ l, v }: { l: string; v: string }) => <div className="aas-stat"><div className="l">{l}</div><div className="v">{v}</div></div>;
 
   return (
     <s-page inlineSize="large">
       <UIStyles />
-      <Hero title="Settings" sub={"Bring balances over from Smile.io"} />
+      <Hero title="Settings" sub="Bring balances over from Smile.io" />
       <Tabs items={SETTINGS_TABS} active="import" />
       {result && "error" in result && result.error && <s-banner tone="critical" heading="Import problem">{result.error}</s-banner>}
       {result && "committed" in result && result.committed && (
-        <s-banner tone="success" heading="Import complete">
-          {fmtInt(result.committed.imported)} members imported with {fmtInt(result.committed.totalPoints)} points; {result.committed.skipped} skipped (already migrated).
-        </s-banner>
+        <s-banner tone="success" heading="Import complete">{fmtInt(result.committed.imported)} members imported with {fmtInt(result.committed.totalPoints)} points; {result.committed.skipped} skipped (already migrated).</s-banner>
       )}
 
       {!p && (
-        <s-section heading="1. Upload the export">
-          <s-paragraph>In Smile.io: <b>Customers → Export</b>. Upload that CSV here. Nothing is written until you confirm the preview.</s-paragraph>
-          <Form method="post" encType="multipart/form-data">
+        <Card icon="📥" title="1 · Upload the export" sub="In Smile.io: Customers → Export. Nothing is written until you confirm the preview.">
+          <Form method="post" encType="multipart/form-data" className="st-form">
             <input type="hidden" name="intent" value="preview" />
-            <input type="file" name="file" accept=".csv,text/csv" required />
-            <s-button type="submit" variant="primary" loading={busy}>Preview import</s-button>
+            <div className="st-foot">
+              <label className="st-btn secondary" style={{ cursor: "pointer" }}>Choose CSV…<input type="file" name="file" accept=".csv,text/csv" required style={{ display: "none" }} onChange={(ev) => { const n = ev.target.files?.[0]?.name; const o = document.getElementById("aas-file-name"); if (o) o.textContent = n ?? ""; }} /></label>
+              <span id="aas-file-name" className="aas-muted" />
+              <button className="st-btn primary" type="submit" disabled={busy}>{busy ? "Reading…" : "Preview import"}</button>
+            </div>
           </Form>
-        </s-section>
+        </Card>
       )}
 
       {p && (
         <>
-          <s-section heading="2. Review">
-            <s-grid gridTemplateColumns="repeat(auto-fit, minmax(160px, 1fr))" gap="base">
-              <Stat label="Rows in file" value={fmtInt(p.rowCount)} />
-              <Stat label="Will import" value={fmtInt(p.importable.length)} />
-              <Stat label="Total points" value={fmtInt(p.totalPoints)} />
-              <Stat label="Already members here" value={fmtInt(p.existingMembers)} />
-              <Stat label="Skip (already migrated)" value={fmtInt(p.skippedMigrated)} />
-              <Stat label="Zero-balance rows" value={fmtInt(p.zero)} />
-            </s-grid>
-            {(p.dupes > 0 || p.badPoints > 0) && (
-              <s-banner tone="warning" heading="Data notes">
-                {p.dupes > 0 && <>{p.dupes} duplicate emails (kept the higher balance). </>}
-                {p.badPoints > 0 && <>{p.badPoints} rows had unreadable points and were dropped.</>}
-              </s-banner>
-            )}
-            <s-table>
-              <s-table-header-row>
-                <s-table-header listSlot="primary">Email</s-table-header>
-                <s-table-header>Name</s-table-header>
-                <s-table-header format="numeric">Points</s-table-header>
-              </s-table-header-row>
-              <s-table-body>
-                {p.sample.map((r) => (
-                  <s-table-row key={r.email}>
-                    <s-table-cell>{r.email}</s-table-cell>
-                    <s-table-cell>{[r.firstName, r.lastName].filter(Boolean).join(" ")}</s-table-cell>
-                    <s-table-cell>{fmtInt(r.points)}</s-table-cell>
-                  </s-table-row>
-                ))}
-              </s-table-body>
-            </s-table>
-            <s-text color="subdued">Showing first {p.sample.length} of {fmtInt(p.importable.length)}.</s-text>
-          </s-section>
-          <s-section heading="3. Commit">
-            <s-paragraph>This writes one <b>MIGRATION</b> ledger entry per member. Members who already have one are skipped, so re-running is safe.</s-paragraph>
-            <Form method="post">
-              <input type="hidden" name="intent" value="commit" />
-              <input type="hidden" name="payload" value={p.payload} />
-              <input type="hidden" name="fileName" value={p.fileName} />
-              <s-stack direction="inline" gap="base">
-                <s-button type="submit" variant="primary" loading={busy}>Import {fmtInt(p.importable.length)} members</s-button>
-                <s-button href="/app/import" variant="secondary">Cancel</s-button>
-              </s-stack>
+          <Card icon="🔍" title="2 · Review" sub={`${p.fileName} · ${fmtInt(p.rowCount)} rows`}>
+            <div className="aas-kpis" style={{ gap: 10 }}>
+              <Stat l="Will import" v={fmtInt(p.importable.length)} />
+              <Stat l="Total points" v={fmtInt(p.totalPoints)} />
+              <Stat l="Already members" v={fmtInt(p.existingMembers)} />
+              <Stat l="Skip (migrated)" v={fmtInt(p.skippedMigrated)} />
+              <Stat l="Zero balance" v={fmtInt(p.zero)} />
+              <Stat l="Dropped rows" v={fmtInt(p.badPoints)} />
+            </div>
+            {p.dupes > 0 && <div className="aas-muted" style={{ margin: "10px 0" }}>{p.dupes} duplicate emails — the higher balance was kept.</div>}
+            <div className="aas-tblwrap" style={{ marginTop: 12 }}><table className="aas-tbl"><thead><tr><th>Email</th><th>Name</th><th className="num">Points</th></tr></thead><tbody>
+              {p.sample.map((r) => <tr key={r.email}><td>{r.email}</td><td className="dim">{[r.firstName, r.lastName].filter(Boolean).join(" ")}</td><td className="num"><b>{fmtInt(r.points)}</b></td></tr>)}
+            </tbody></table></div>
+            <div className="aas-muted" style={{ marginTop: 8 }}>Showing first {p.sample.length} of {fmtInt(p.importable.length)}.</div>
+          </Card>
+          <Card icon="✅" title="3 · Commit" sub="Writes one MIGRATION ledger entry per member. Members who already have one are skipped, so re-running is safe.">
+            <Form method="post" className="st-form">
+              <input type="hidden" name="intent" value="commit" /><input type="hidden" name="payload" value={p.payload} /><input type="hidden" name="fileName" value={p.fileName} />
+              <div className="st-foot">
+                <button className="st-btn primary" type="submit" disabled={busy}>{busy ? "Importing…" : `Import ${fmtInt(p.importable.length)} members`}</button>
+                <a className="st-btn ghost" href="/app/import">Cancel</a>
+              </div>
             </Form>
-          </s-section>
+          </Card>
         </>
       )}
 
-      {batches.length > 0 && (
-        <s-section heading="Past imports" padding="none">
-          <s-table>
-            <s-table-header-row>
-              <s-table-header>When</s-table-header>
-              <s-table-header listSlot="primary">File</s-table-header>
-              <s-table-header format="numeric">Imported</s-table-header>
-              <s-table-header format="numeric">Skipped</s-table-header>
-              <s-table-header format="numeric">Points</s-table-header>
-              <s-table-header>By</s-table-header>
-            </s-table-header-row>
-            <s-table-body>
-              {batches.map((b) => (
-                <s-table-row key={b.id}>
-                  <s-table-cell>{fmtDate(b.createdAt)}</s-table-cell>
-                  <s-table-cell>{b.fileName}</s-table-cell>
-                  <s-table-cell>{fmtInt(b.imported)}</s-table-cell>
-                  <s-table-cell>{fmtInt(b.skipped)}</s-table-cell>
-                  <s-table-cell>{fmtInt(b.totalPoints)}</s-table-cell>
-                  <s-table-cell>{b.staffEmail ?? ""}</s-table-cell>
-                </s-table-row>
-              ))}
-            </s-table-body>
-          </s-table>
-        </s-section>
-      )}
+      <Card icon="📚" title="Past imports" sub={batches.length ? `${batches.length} batch${batches.length === 1 ? "" : "es"}` : "none yet"}>
+        {batches.length === 0 ? <Empty>No imports yet.</Empty> : (
+          <div className="aas-tblwrap"><table className="aas-tbl"><thead><tr><th>When</th><th>File</th><th className="num">Imported</th><th className="num">Skipped</th><th className="num">Points</th><th>By</th></tr></thead><tbody>
+            {batches.map((b) => <tr key={b.id}><td className="dim" style={{ whiteSpace: "nowrap" }}>{fmtDate(b.createdAt)}</td><td>{b.fileName}</td><td className="num">{fmtInt(b.imported)}</td><td className="num dim">{fmtInt(b.skipped)}</td><td className="num"><b>{fmtInt(b.totalPoints)}</b></td><td className="dim">{b.staffEmail ?? ""}</td></tr>)}
+          </tbody></table></div>
+        )}
+      </Card>
     </s-page>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <s-box padding="base" background="subdued" border="base" borderRadius="base">
-      <s-text color="subdued">{label}</s-text>
-      <s-heading>{value}</s-heading>
-    </s-box>
   );
 }
 

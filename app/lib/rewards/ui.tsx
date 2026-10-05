@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 
@@ -83,6 +84,160 @@ export function Tabs({ items, active }: { items: TabItem[]; active: string }) {
   );
 }
 
+export const EXTRA_CSS = `.st-wrap{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px;align-items:start;margin-top:8px}
+.st-card{position:relative;background:#fff;border:2px dashed #e3d9cc;border-radius:18px;padding:0;margin-bottom:16px;overflow:hidden}
+.st-head{display:flex;align-items:center;gap:14px;padding:16px 20px;background:#fbf7f1;border-bottom:2px dashed #eee5d9}
+.st-badge{width:44px;height:44px;border-radius:50%;background:#fbe7e8;border:2px dashed #c60d11;display:flex;align-items:center;justify-content:center;font-size:20px;flex:none}
+.st-head h3{margin:0;font-size:17px;font-weight:800;color:#1f1f1f;letter-spacing:-.01em}
+.st-head p{margin:2px 0 0;font-size:13px;color:#777}
+.st-body{padding:18px 20px 20px}
+.st-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.st-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.fld label{display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#8a8a8a;margin-bottom:6px}
+.fld .box{display:flex;align-items:center;background:#fff;border:1.5px solid #e3d9cc;border-radius:12px;transition:border-color .15s, box-shadow .15s;overflow:hidden}
+.fld .box:focus-within{border-color:#c60d11;box-shadow:0 0 0 3px rgba(198,13,17,.12)}
+.fld input{flex:1;min-width:0;border:0;outline:0;background:transparent;padding:12px 14px;font:inherit;font-size:18px;font-weight:700;color:#1f1f1f}
+.fld input.txt{font-size:15px;font-weight:600}
+.fld .unit{padding:0 12px;font-size:12px;font-weight:700;color:#c60d11;background:#fbe7e8;align-self:stretch;display:flex;align-items:center;border-left:1.5px dashed #f0c9cb;white-space:nowrap}
+.fld .hint{font-size:12px;color:#8a8a8a;margin-top:6px}
+.st-toggle{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:18px;padding:14px 16px;border-radius:14px;border:2px dashed #e3d9cc;cursor:pointer;user-select:none;transition:all .15s}
+.st-toggle.on{border-color:#c60d11;background:#fbe7e8}
+.st-toggle b{font-size:15px;color:#1f1f1f}.st-toggle small{display:block;color:#666;font-size:12px;margin-top:2px}
+.st-sw{width:52px;height:30px;border-radius:999px;background:#d9d2c7;position:relative;flex:none;transition:background .15s}
+.st-sw::after{content:"";position:absolute;top:4px;left:4px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .15s}
+.st-toggle.on .st-sw{background:#c60d11}.st-toggle.on .st-sw::after{left:26px}
+.st-chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.st-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;border:1.5px dashed #e3d9cc;font-size:13px;font-weight:700;color:#555;cursor:pointer;user-select:none;background:#fff}
+.st-chip input{display:none}
+.st-chip .dot{width:14px;height:14px;border-radius:50%;border:2px solid #ccc;background:#fff}
+.st-chip.on{border-color:#c60d11;color:#c60d11;background:#fbe7e8}
+.st-chip.on .dot{border-color:#c60d11;background:#c60d11;box-shadow:inset 0 0 0 2px #fff}
+.st-side{position:sticky;top:12px}
+.st-tagcard{position:relative;background:#fff;border:2px dashed #c60d11;border-radius:18px;padding:22px 20px 18px;text-align:center;overflow:hidden}
+.st-tagcard::before{content:"";position:absolute;inset:0 0 auto 0;height:70px;background-color:#f4eee4;background-image:repeating-linear-gradient(0deg,rgba(198,13,17,.13) 0 14px,transparent 14px 28px),repeating-linear-gradient(90deg,rgba(198,13,17,.13) 0 14px,transparent 14px 28px)}
+.st-tagcard>*{position:relative}
+.st-ribbon{display:inline-block;position:relative;background:#c60d11;color:#fff;font-weight:800;font-size:13px;padding:7px 22px;margin-bottom:16px}
+.st-ribbon::before,.st-ribbon::after{content:"";position:absolute;top:0;bottom:0;width:10px;background:#c60d11}
+.st-ribbon::before{left:-8px;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,60% 50%)}
+.st-ribbon::after{right:-8px;clip-path:polygon(0 0,100% 0,40% 50%,100% 100%,0 100%)}
+.st-big{font-size:40px;font-weight:900;color:#1f1f1f;line-height:1;letter-spacing:-.02em}
+.st-big small{font-size:15px;font-weight:700;color:#666;margin-left:4px}
+.st-cap{font-size:13px;color:#666;margin:6px 0 14px}
+.st-worth{display:inline-block;padding:8px 18px;border-radius:999px;background:#f4d3d5;font-weight:700;font-size:14px;color:#1f1f1f;position:relative}
+.st-worth::before{content:"";position:absolute;inset:3px;border:1.4px dashed #c60d11;border-radius:999px}
+.st-worth b{color:#c60d11;font-size:18px}
+.st-facts{text-align:left;margin:18px 0 6px;border-top:2px dashed #eee5d9;padding-top:12px}
+.st-facts div{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;color:#666}
+.st-facts b{color:#1f1f1f}
+.st-save{position:relative;width:100%;margin-top:14px;padding:14px;border:0;border-radius:12px;background:#c60d11;color:#fff;font:inherit;font-weight:800;font-size:15px;cursor:pointer}
+.st-save::after{content:"";position:absolute;inset:5px;border:1.5px dashed rgba(255,255,255,.7);border-radius:8px;pointer-events:none}
+.st-save:disabled{opacity:.6;cursor:wait}
+.st-note{font-size:11px;color:#8a8a8a;margin-top:8px}
+@media (max-width:980px){.st-wrap{grid-template-columns:1fr}.st-side{position:static}}
+@media (max-width:640px){.st-grid,.st-grid.two{grid-template-columns:1fr}}
+
+.st-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 18px;border:0;border-radius:11px;font:inherit;font-weight:800;font-size:14px;cursor:pointer;text-decoration:none;white-space:nowrap;line-height:1}
+.st-btn.sm{padding:8px 13px;font-size:13px;border-radius:9px}
+.st-btn.primary{background:#c60d11;color:#fff}
+.st-btn.primary::after{content:"";position:absolute;inset:4px;border:1.5px dashed rgba(255,255,255,.65);border-radius:7px;pointer-events:none}
+.st-btn.secondary{background:#fff;color:#1f1f1f;border:1.5px dashed #c9bfb2}
+.st-btn.secondary:hover{border-color:#c60d11;color:#c60d11}
+.st-btn.danger{background:#fff;color:#8a1c1c;border:1.5px dashed #e3b4b4}
+.st-btn.danger:hover{background:#fdecec}
+.st-btn.ghost{background:transparent;color:#666;padding:8px 10px}
+.st-btn.ghost:hover{color:#c60d11}
+.st-btn:disabled{opacity:.55;cursor:not-allowed}
+.fld select{flex:1;min-width:0;border:0;outline:0;background:transparent;padding:12px 14px;font:inherit;font-size:15px;font-weight:600;color:#1f1f1f;appearance:none;cursor:pointer}
+.fld .box.sel::after{content:"⌄";padding:0 14px;color:#8a8a8a;font-size:18px;line-height:1}
+.fld textarea{flex:1;min-width:0;border:0;outline:0;background:transparent;padding:12px 14px;font:inherit;font-size:14px;color:#1f1f1f;resize:vertical;min-height:80px}
+.fld input[type=date]{font-size:14px;font-weight:600}
+.fld input::placeholder{color:#b9b0a3;font-weight:500}
+.st-empty{padding:28px;text-align:center;color:#8a8a8a;font-size:14px;border:2px dashed #eee5d9;border-radius:14px;background:#fffdf9}
+.st-rows{display:grid;gap:10px}
+.st-row{display:grid;grid-template-columns:minmax(0,1.4fr) 180px 120px;gap:14px;align-items:end;padding:12px 14px;border:1.5px dashed #e3d9cc;border-radius:14px;background:#fffdf9}
+.st-row .ttl{font-weight:800;font-size:14px;color:#1f1f1f}.st-row .dsc{font-size:12px;color:#777;margin-top:2px}
+.st-list{display:grid;gap:10px}
+.st-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;padding:12px 14px;border:1.5px dashed #e3d9cc;border-radius:14px;background:#fff}
+.st-item.off{opacity:.6;background:#fafafa}
+.st-item .ic{width:40px;height:40px;border-radius:50%;background:#fbe7e8;border:1.5px dashed #c60d11;display:flex;align-items:center;justify-content:center;font-size:18px}
+.st-item .ttl{font-weight:800;font-size:14px;color:#1f1f1f}
+.st-item .meta{display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:#777;margin-top:3px}
+.st-item .meta b{color:#1f1f1f}
+.st-item .acts{display:flex;gap:6px;align-items:center}
+.st-form{margin-top:4px}
+.st-form .st-grid{margin-bottom:14px}
+.st-foot{display:flex;gap:10px;align-items:center;margin-top:4px}
+.st-pct{font-size:12px;color:#8a8a8a}
+.st-table .aas-tbl td{padding:11px 8px}
+@media (max-width:760px){.st-row{grid-template-columns:1fr}.st-item{grid-template-columns:auto minmax(0,1fr)}.st-item .acts{grid-column:1/-1}}
+`;
+
 export function UIStyles() {
-  return <style>{UI_CSS}</style>;
+  return <style>{UI_CSS + EXTRA_CSS}</style>;
+}
+
+
+// ───────────────────────── Component library ─────────────────────────
+export function Card({ icon, title, sub, children, actions }: { icon?: string; title: string; sub?: ReactNode; children: ReactNode; actions?: ReactNode }) {
+  return (
+    <div className="st-card">
+      <div className="st-head">
+        {icon && <div className="st-badge">{icon}</div>}
+        <div style={{ flex: 1, minWidth: 0 }}><h3>{title}</h3>{sub && <p>{sub}</p>}</div>
+        {actions && <div className="aas-actions">{actions}</div>}
+      </div>
+      <div className="st-body">{children}</div>
+    </div>
+  );
+}
+
+export function Field({ label, hint, unit, children, style }: { label: string; hint?: ReactNode; unit?: string; children: ReactNode; style?: any }) {
+  return (
+    <div className="fld" style={style}>
+      <label>{label}</label>
+      <div className="box">{children}{unit && <span className="unit">{unit}</span>}</div>
+      {hint && <div className="hint">{hint}</div>}
+    </div>
+  );
+}
+
+export function Toggle({ name, checked, onChange, title, desc }: { name?: string; checked: boolean; onChange: (v: boolean) => void; title: string; desc?: string }) {
+  return (
+    <>
+      {name && <input type="hidden" name={name} value={checked ? "on" : "false"} />}
+      <div className={`st-toggle${checked ? " on" : ""}`} role="switch" aria-checked={checked} tabIndex={0}
+           onClick={() => onChange(!checked)} onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); onChange(!checked); } }}>
+        <div><b>{title}</b>{desc && <small>{desc}</small>}</div>
+        <span className="st-sw" />
+      </div>
+    </>
+  );
+}
+
+export function Chip({ name, label, defaultChecked, value = "on" }: { name: string; label: string; defaultChecked?: boolean; value?: string }) {
+  const [on, setOn] = useState(!!defaultChecked);
+  return (
+    <label className={`st-chip${on ? " on" : ""}`}>
+      <input type="checkbox" name={name} value={value} checked={on} onChange={(e) => setOn(e.target.checked)} />
+      <span className="dot" />{label}
+    </label>
+  );
+}
+
+export function Ribbon({ children }: { children: ReactNode }) {
+  return <span className="st-ribbon">{children}</span>;
+}
+
+export function Btn({ children, variant = "primary", type = "submit", to, onClick, disabled, loading, small, target }: { children: ReactNode; variant?: "primary" | "secondary" | "danger" | "ghost"; type?: "submit" | "button"; to?: string; onClick?: () => void; disabled?: boolean; loading?: boolean; small?: boolean; target?: string }) {
+  const cls = `st-btn ${variant}${small ? " sm" : ""}`;
+  if (to) return target ? <a className={cls} href={to} target={target}>{children}</a> : <Link className={cls} to={to}>{children}</Link>;
+  return <button className={cls} type={type} onClick={onClick} disabled={disabled || loading}>{loading ? "…" : children}</button>;
+}
+
+export function Pill({ children, tone = "ok" }: { children: ReactNode; tone?: "ok" | "neg" | "warn" | "tier" | "info" }) {
+  return <span className={`aas-pill ${tone === "ok" ? "" : tone}`}>{children}</span>;
+}
+
+export function Empty({ children }: { children: ReactNode }) {
+  return <div className="st-empty">{children}</div>;
 }

@@ -1,11 +1,11 @@
 import type { LoaderFunctionArgs, ActionFunctionArgs, HeadersFunction } from "react-router";
-import { Form, useLoaderData, redirect } from "react-router";
+import { Form, Link, useLoaderData, redirect } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { useActionToast } from "../lib/rewards/use-toast";
 import { str, fmtInt, fmtDate } from "../lib/rewards/format";
-import { Hero, UIStyles, Tabs, EARN_TABS, SETTINGS_TABS } from "../lib/rewards/ui";
+import { Hero, UIStyles, Tabs, EARN_TABS, Card, Field, Empty, Pill } from "../lib/rewards/ui";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -50,62 +50,49 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 const KIND: Record<string, string> = { WHEEL: "Spin wheel", SCRATCH: "Scratch card", INSTANT: "Instant win" };
 
+const KIND: Record<string, string> = { WHEEL: "Spin wheel", SCRATCH: "Scratch card", INSTANT: "Instant win" };
+const KICON: Record<string, string> = { WHEEL: "🎡", SCRATCH: "🎟️", INSTANT: "🎁" };
+
 export default function Campaigns() {
   const { campaigns } = useLoaderData<typeof loader>();
   useActionToast();
+  const live = campaigns.find((c) => c.active);
   return (
     <s-page inlineSize="large">
       <UIStyles />
-      <Hero title="Earn & Redeem" sub={"Spin-to-win, scratch card and instant-win pop-ups"} />
+      <Hero title="Earn & Redeem" sub={live ? `Pop-up live: ${live.name}` : "No pop-up is live right now"} />
       <Tabs items={EARN_TABS} active="campaigns" />
-      <s-section padding="none">
-        <s-table>
-          <s-table-header-row>
-            <s-table-header listSlot="primary">Campaign</s-table-header>
-            <s-table-header>Type</s-table-header>
-            <s-table-header>Window</s-table-header>
-            <s-table-header format="numeric">Prizes</s-table-header>
-            <s-table-header format="numeric">Plays</s-table-header>
-            <s-table-header>Status</s-table-header>
-            <s-table-header></s-table-header>
-          </s-table-header-row>
-          <s-table-body>
-            {campaigns.map((c) => (
-              <s-table-row key={c.id}>
-                <s-table-cell><s-link href={`/app/campaigns/${c.id}`}>{c.name}</s-link></s-table-cell>
-                <s-table-cell>{KIND[c.kind]}</s-table-cell>
-                <s-table-cell>{c.startsAt || c.endsAt ? `${c.startsAt?.slice(0, 10) ?? "…"} → ${c.endsAt?.slice(0, 10) ?? "…"}` : "always"}</s-table-cell>
-                <s-table-cell>{c.prizes}</s-table-cell>
-                <s-table-cell>{fmtInt(c.plays)}</s-table-cell>
-                <s-table-cell>
-                  <Form method="post"><input type="hidden" name="intent" value="toggle" /><input type="hidden" name="id" value={c.id} />
-                    <s-button type="submit" variant="tertiary" tone={c.active ? "success" : "neutral"}>{c.active ? "Live" : "Paused"}</s-button></Form>
-                </s-table-cell>
-                <s-table-cell>
-                  <Form method="post" onSubmit={(e) => { if (!confirm(`Delete "${c.name}" and its ${c.plays} plays?`)) e.preventDefault(); }}>
-                    <input type="hidden" name="intent" value="delete" /><input type="hidden" name="id" value={c.id} />
-                    <s-button type="submit" tone="critical" variant="tertiary">Delete</s-button></Form>
-                </s-table-cell>
-              </s-table-row>
-            ))}
-            {campaigns.length === 0 && <s-table-row><s-table-cell>No campaigns yet.</s-table-cell></s-table-row>}
-          </s-table-body>
-        </s-table>
-      </s-section>
-      <s-section heading="New campaign">
-        <s-paragraph>Only one campaign is live at a time. A new campaign starts paused with four sample prizes you can edit.</s-paragraph>
-        <Form method="post">
-          <s-grid gridTemplateColumns="2fr 1fr auto" gap="base" alignItems="end">
-            <s-text-field name="name" label="Name (internal)" placeholder="Fall welcome wheel" required />
-            <s-select name="kind" label="Type" defaultValue="WHEEL">
-              <s-option value="WHEEL">Spin wheel</s-option>
-              <s-option value="SCRATCH">Scratch card</s-option>
-              <s-option value="INSTANT">Instant win</s-option>
-            </s-select>
-            <s-button type="submit" variant="primary">Create</s-button>
-          </s-grid>
+
+      <Card icon="🎡" title="New campaign" sub="Only one campaign is live at a time. A new one starts paused with four sample prizes you can edit.">
+        <Form method="post" className="st-form">
+          <div className="st-grid">
+            <Field label="Name (internal)"><input className="txt" name="name" placeholder="Fall welcome wheel" required /></Field>
+            <Field label="Type"><select name="kind" defaultValue="WHEEL"><option value="WHEEL">Spin wheel</option><option value="SCRATCH">Scratch card</option><option value="INSTANT">Instant win</option></select></Field>
+            <div className="fld"><label>&nbsp;</label><button className="st-btn primary" type="submit" style={{ width: "100%" }}>Create</button></div>
+          </div>
         </Form>
-      </s-section>
+      </Card>
+
+      <Card icon="🧵" title="Campaigns" sub={`${campaigns.length} saved`}>
+        {campaigns.length === 0 ? <Empty>No campaigns yet.</Empty> : (
+          <div className="st-list">
+            {campaigns.map((c) => (
+              <div key={c.id} className={`st-item${c.active ? "" : " off"}`}>
+                <div className="ic">{KICON[c.kind]}</div>
+                <div>
+                  <div className="ttl"><Link to={`/app/campaigns/${c.id}`} style={{ color: "inherit" }}>{c.name}</Link> {c.active ? <Pill>live</Pill> : <Pill tone="warn">paused</Pill>}</div>
+                  <div className="meta"><span>{KIND[c.kind]}</span><span>·</span><span>{c.prizes} prizes</span><span>·</span><b>{fmtInt(c.plays)} plays</b><span>·</span><span>{c.startsAt || c.endsAt ? `${c.startsAt?.slice(0, 10) ?? "…"} → ${c.endsAt?.slice(0, 10) ?? "…"}` : "no date limits"}</span></div>
+                </div>
+                <div className="acts">
+                  <Form method="post"><input type="hidden" name="intent" value="toggle" /><input type="hidden" name="id" value={c.id} /><button className={`st-btn ${c.active ? "secondary" : "primary"} sm`} type="submit">{c.active ? "Pause" : "Go live"}</button></Form>
+                  <Link className="st-btn secondary sm" to={`/app/campaigns/${c.id}`}>Edit</Link>
+                  <Form method="post" onSubmit={(e) => { if (!confirm(`Delete "${c.name}" and its ${c.plays} plays?`)) e.preventDefault(); }}><input type="hidden" name="intent" value="delete" /><input type="hidden" name="id" value={c.id} /><button className="st-btn danger sm" type="submit">Delete</button></Form>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
     </s-page>
   );
 }

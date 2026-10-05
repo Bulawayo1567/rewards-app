@@ -6,7 +6,7 @@ import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { useActionToast } from "../lib/rewards/use-toast";
 import { str, num, fmtInt } from "../lib/rewards/format";
-import { Hero, UIStyles } from "../lib/rewards/ui";
+import { Hero, UIStyles, Card, Field } from "../lib/rewards/ui";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -95,7 +95,7 @@ export default function Tiers() {
         right={
           <Form method="post" onSubmit={(ev) => { if (!confirm("Recalculate tiers for all members now?")) ev.preventDefault(); }}>
             <input type="hidden" name="intent" value="retier" />
-            <s-button type="submit" variant="primary">Recalculate all members</s-button>
+            <button className="st-btn primary" type="submit">Recalculate all members</button>
           </Form>
         }
       />
@@ -116,10 +116,10 @@ export default function Tiers() {
                 <div className="aas-kv"><span>Earning</span><b>{t.multiplier}×</b></div>
                 <div className="aas-kv"><span>Perks</span><b style={{ textAlign: "right" }}>{t.perks || "—"}</b></div>
                 <div className="ft">
-                  <s-button type="button" variant="secondary" onClick={() => setEditing(t)}>Edit</s-button>
+                  <button className="st-btn secondary sm" type="button" onClick={() => setEditing(t)}>Edit</button>
                   <Form method="post" onSubmit={(ev) => { if (!confirm(`Delete tier "${t.name}"? Its members drop to the next lower tier when you recalculate.`)) ev.preventDefault(); }}>
                     <input type="hidden" name="intent" value="delete" /><input type="hidden" name="id" value={t.id} />
-                    <s-button type="submit" tone="critical" variant="tertiary">Delete</s-button>
+                    <button className="st-btn danger sm" type="submit">Delete</button>
                   </Form>
                 </div>
               </div>
@@ -129,34 +129,26 @@ export default function Tiers() {
       </div>
 
       {/* Add / edit */}
-      <div className="aas-panel">
-        <div className="aas-h">{e ? `Edit tier: ${e.name}` : "Add a tier"}</div>
-        <p className="aas-muted" style={{ margin: "0 0 12px", fontSize: 13 }}>
-          Members land in the highest-ranked tier whose threshold they meet. A multiplier of 1.25 means 25% more points on every order. After adding or changing tiers, press <b>Recalculate all members</b>.
-        </p>
-        <Form method="post" key={e?.id ?? "new"}>
+      <Card icon={e ? "✏️" : "🏷️"} title={e ? `Edit tier: ${e.name}` : "Add a tier"} sub="Members land in the highest-ranked tier whose threshold they meet. After changing tiers, press Recalculate all members.">
+        <Form method="post" key={e?.id ?? "new"} className="st-form">
           <input type="hidden" name="id" value={e?.id ?? ""} />
-          <s-grid gridTemplateColumns="repeat(auto-fit, minmax(160px, 1fr))" gap="base">
-            <s-text-field name="name" label="Name" placeholder="Silver" defaultValue={e?.name ?? ""} required />
-            <s-number-field name="rank" label="Rank" defaultValue={String(e?.rank ?? nextRank)} min={0} />
-            <s-number-field name="threshold" label="Threshold" defaultValue={String(e?.threshold ?? 0)} min={0} />
-            <s-select name="basis" label="Threshold basis" defaultValue={e?.basis ?? "LIFETIME_POINTS"}>
-              <s-option value="LIFETIME_POINTS">Lifetime points</s-option>
-              <s-option value="ROLLING_12M_SPEND">$ spent, last 12 months</s-option>
-              <s-option value="LIFETIME_SPEND">$ spent, lifetime</s-option>
-            </s-select>
-            <s-number-field name="multiplier" label="Multiplier" defaultValue={String(e?.multiplier ?? 1)} step={0.05} min={0} />
-            <s-text-field name="color" label="Colour (hex)" placeholder="#c60d11" defaultValue={e?.color ?? ""} />
-          </s-grid>
-          <div style={{ marginTop: 12 }}>
-            <s-text-field name="perks" label="Perks (shown to customers)" placeholder="Free shipping on orders over $99, early access to sales" defaultValue={e?.perks ?? ""} />
+          <div className="st-grid">
+            <Field label="Name"><input className="txt" name="name" placeholder="Silver" defaultValue={e?.name ?? ""} required /></Field>
+            <Field label="Rank" hint="0 = entry tier"><input name="rank" type="number" min="0" defaultValue={e?.rank ?? nextRank} /></Field>
+            <Field label="Threshold"><input name="threshold" type="number" min="0" defaultValue={e?.threshold ?? 0} /></Field>
           </div>
-          <div className="aas-actions" style={{ marginTop: 14 }}>
-            <s-button type="submit" variant="primary">{e ? "Save changes" : "Add tier"}</s-button>
-            {e && <s-button type="button" onClick={() => setEditing(null)}>Cancel</s-button>}
+          <div className="st-grid">
+            <Field label="Threshold basis"><select name="basis" defaultValue={e?.basis ?? "LIFETIME_POINTS"}><option value="LIFETIME_POINTS">Lifetime points</option><option value="ROLLING_12M_SPEND">$ spent, last 12 months</option><option value="LIFETIME_SPEND">$ spent, lifetime</option></select></Field>
+            <Field label="Multiplier" unit="×" hint="1.25 = 25% more points"><input name="multiplier" type="number" step="0.05" min="0" defaultValue={e?.multiplier ?? 1} /></Field>
+            <Field label="Colour" hint="hex, optional"><input className="txt" name="color" placeholder="#c60d11" defaultValue={e?.color ?? ""} /></Field>
+          </div>
+          <div className="st-grid two"><Field label="Perks (shown to customers)"><input className="txt" name="perks" placeholder="Free shipping on orders over $99, early access to sales" defaultValue={e?.perks ?? ""} /></Field></div>
+          <div className="st-foot">
+            <button className="st-btn primary" type="submit">{e ? "Save changes" : "Add tier"}</button>
+            {e && <button className="st-btn ghost" type="button" onClick={() => setEditing(null)}>Cancel</button>}
           </div>
         </Form>
-      </div>
+      </Card>
     </s-page>
   );
 }

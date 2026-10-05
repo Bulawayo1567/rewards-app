@@ -6,6 +6,7 @@ import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { getProgram } from "../lib/rewards/program.server";
 import { fmtDate, fmtInt, fmtMoney } from "../lib/rewards/format";
+import { UIStyles } from "../lib/rewards/ui";
 
 const fmtMoney0 = (n: number) => new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 }).format(n);
 
@@ -174,6 +175,7 @@ export default function Dashboard() {
         </div>
       </div>
 
+      <UIStyles />
       <style>{`.aas-tiles{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px}@media (max-width:760px){.aas-tiles{grid-template-columns:repeat(4,minmax(0,1fr))}}@media (max-width:520px){.aas-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .aas-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:6px 0}
 @media (max-width:760px){.aas-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -245,10 +247,10 @@ export default function Dashboard() {
         <div className="aas-sub">
           <div className="aas-h" style={{ margin: 0 }}>Overview · last {range} days</div>
           <div className="aas-actions">
-            {[7, 30, 90].map((r) => <s-button key={r} href={`/app?range=${r}`} variant={range === r ? "primary" : "secondary"}>{r}d</s-button>)}
-            <s-button href="/app/campaigns">New campaign</s-button>
-            <s-button href="/app/export/members" target="_top">Export members</s-button>
-            <s-button href="/app/export/ledger" target="_top">Export ledger</s-button>
+            {[7, 30, 90].map((r) => <Link key={r} className={`st-btn ${range === r ? "primary" : "secondary"} sm`} to={`/app?range=${r}`}>{r}d</Link>)}
+            <Link className="st-btn secondary sm" to="/app/campaigns">New campaign</Link>
+            <a className="st-btn secondary sm" href="/app/export/members" target="_top">Export members</a>
+            <a className="st-btn secondary sm" href="/app/export/ledger" target="_top">Export ledger</a>
           </div>
         </div>
 
@@ -323,8 +325,8 @@ export default function Dashboard() {
         {tab === "activity" && (
           <>
             <Form method="get" action="/app/customers" className="aas-find" style={{ maxWidth: 520, marginBottom: 12 }}>
-              <s-text-field name="q" label="Find a member" labelAccessibilityVisibility="exclusive" placeholder="Find a member — email or name" />
-              <s-button type="submit" variant="primary">Look up</s-button>
+              <div className="fld" style={{ flex: 1 }}><div className="box"><input className="txt" name="q" placeholder="Find a member — email or name" /></div></div>
+              <button className="st-btn primary" type="submit">Look up</button>
             </Form>
             <table className="aas-tbl">
               <thead><tr><th>Member</th><th>Type</th><th className="num">{program.pointsName}</th><th>Note</th><th>When</th></tr></thead>
