@@ -1,5 +1,5 @@
 import type { LoaderFunctionArgs, HeadersFunction } from "react-router";
-import { Form, useLoaderData } from "react-router";
+import { Form, Link, useLoaderData } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
@@ -68,9 +68,9 @@ export default function Customers() {
           </div>
         </div>
         <div className="aas-chips">
-          <a href="/app/customers" className={`aas-chip${!seg ? " on" : ""}`}>All <span className="c">{fmtInt(all)}</span></a>
+          <Link to="/app/customers" className={`aas-chip${!seg ? " on" : ""}`}>All <span className="c">{fmtInt(all)}</span></Link>
           {segments.map((x) => (
-            <a key={x.key} href={`/app/customers?segment=${x.key}`} className={`aas-chip${seg === x.key ? " on" : ""}`}>{x.label} <span className="c">{fmtInt(x.count)}</span></a>
+            <Link key={x.key} to={`/app/customers?segment=${x.key}`} className={`aas-chip${seg === x.key ? " on" : ""}`}>{x.label} <span className="c">{fmtInt(x.count)}</span></Link>
           ))}
         </div>
       </div>

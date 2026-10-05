@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { LoaderFunctionArgs, HeadersFunction } from "react-router";
-import { Form, useLoaderData } from "react-router";
+import { Form, Link, useLoaderData } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
@@ -234,11 +234,11 @@ export default function Dashboard() {
       <div className="aas-panel">
         <div className="aas-tiles">
           {tiles.map((t) => (
-            <a key={t.href} href={t.href} className="aas-tile">
+            <Link key={t.href} to={t.href} className="aas-tile">
               <div style={{ fontSize: 22, lineHeight: 1 }}>{t.icon}</div>
               <div style={{ fontWeight: 700, fontSize: 14, marginTop: 8 }}>{t.label}</div>
               <div style={{ fontSize: 12, color: "#8a8a8a", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.sub}</div>
-            </a>
+            </Link>
           ))}
         </div>
 
