@@ -27,7 +27,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     segTop, segDormant, segPending, segNegative, segNoAccount, migratedCount, ruleCount, campaignCount,
   ] = await Promise.all([
     prisma.customer.count({ where: { shop } }),
-    prisma.customer.count({ where: { shop, createdAt: { gte: since } } }),
+    prisma.customer.count({ where: { shop, createdAt: { gte: since }, ledger: { none: { type: "MIGRATION" } } } }),
     prisma.customer.aggregate({ where: { shop }, _sum: { balance: true } }),
     prisma.customer.aggregate({ where: { shop }, _sum: { pendingBalance: true } }),
     prisma.pointsLedger.aggregate({ where: { shop, points: { gt: 0 }, type: { notIn: ["MIGRATION", "REDEEM_REVERSAL"] }, createdAt: { gte: since } }, _sum: { points: true } }),
@@ -171,7 +171,14 @@ export default function Dashboard() {
       </div>
 
       {/* Nav tiles */}
-      <style>{`.aas-tiles{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px;margin-bottom:6px}@media (max-width:1000px){.aas-tiles{grid-template-columns:repeat(4,minmax(0,1fr))}}@media (max-width:520px){.aas-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}`}</style>
+      <style>{`.aas-tiles{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px;margin-bottom:6px}@media (max-width:1000px){.aas-tiles{grid-template-columns:repeat(4,minmax(0,1fr))}}@media (max-width:520px){.aas-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.aas-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:6px 0}
+@media (max-width:1100px){.aas-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:560px){.aas-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.aas-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.aas-find{display:flex;align-items:center;gap:8px;flex:1 1 320px;max-width:460px}
+.aas-find s-text-field{flex:1}
+.aas-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}`}</style>
       <div className="aas-tiles">
         {tiles.map((t) => (
           <a key={t.href} href={t.href} style={{ textDecoration: "none", color: "#1f1f1f", background: "#fff", border: "2px dashed #e3d9cc", borderRadius: 12, padding: "12px 12px 10px", display: "block", transition: "border-color .15s" }}
@@ -194,35 +201,31 @@ export default function Dashboard() {
         <s-banner tone="success" heading="Program is live">{liveCampaign ? `Pop-up live: ${liveCampaign.name}` : "No pop-up campaign is live"}</s-banner>
       )}
 
-      {/* Lookup + actions + period */}
+      {/* Lookup + actions + period — one row */}
       <s-section>
-        <s-stack direction="inline" gap="base" alignItems="end" justifyContent="space-between">
-          <Form method="get" action="/app/customers">
-            <s-stack direction="inline" gap="small" alignItems="end">
-              <s-text-field name="q" label="Find a member" placeholder="Email or name" />
-              <s-button type="submit" variant="primary">Look up</s-button>
-            </s-stack>
+        <div className="aas-bar">
+          <Form method="get" action="/app/customers" className="aas-find">
+            <s-text-field name="q" label="Find a member" labelAccessibilityVisibility="exclusive" placeholder="Find a member — email or name" />
+            <s-button type="submit" variant="primary">Look up</s-button>
           </Form>
-          <s-stack direction="inline" gap="small" alignItems="end">
-            <s-stack direction="inline" gap="none">
-              {[7, 30, 90].map((r) => <s-button key={r} href={`/app?range=${r}`} variant={range === r ? "primary" : "secondary"}>{r}d</s-button>)}
-            </s-stack>
+          <div className="aas-actions">
+            {[7, 30, 90].map((r) => <s-button key={r} href={`/app?range=${r}`} variant={range === r ? "primary" : "secondary"}>{r}d</s-button>)}
             <s-button href="/app/campaigns">New campaign</s-button>
             <s-button href="/app/export/members" target="_top">Export members</s-button>
             <s-button href="/app/export/ledger" target="_top">Export ledger</s-button>
-          </s-stack>
-        </s-stack>
+          </div>
+        </div>
       </s-section>
 
       {/* KPIs */}
-      <s-grid gridTemplateColumns="repeat(auto-fit, minmax(160px, 1fr))" gap="base">
+      <div className="aas-kpis">
         <Stat label="Members" value={fmtInt(kpis.members)} sub={`+${fmtInt(kpis.newMembers)} in ${range}d`} />
         <Stat label="Points liability" value={fmtMoney(kpis.liability)} sub={`${fmtInt(kpis.outstanding)} ${program.pointsName}${kpis.pending ? ` · ${fmtInt(kpis.pending)} pending` : ""}`} />
         <Stat label={`Awarded (${range}d)`} value={fmtInt(kpis.awarded)} sub={`${fmtInt(kpis.orders)} orders`} />
         <Stat label={`Redeemed (${range}d)`} value={fmtInt(kpis.redeemed)} sub={`${fmtInt(kpis.redemptions)} redemptions · ${kpis.redemptionRate}% of orders`} />
         <Stat label="Code use" value={`${kpis.codeUseRate}%`} sub={`${fmtInt(kpis.codesUsed)} of ${fmtInt(kpis.codesIssued)} used · ${fmtInt(kpis.activeCodes)} active`} />
         <Stat label={`Pop-up (${range}d)`} value={fmtInt(kpis.plays)} sub={`${fmtInt(kpis.playsWithCode)} won codes · ${fmtInt(kpis.playCodesUsed)} ordered`} />
-      </s-grid>
+      </div>
 
       {/* Chart */}
       <s-section heading={`${program.pointsName} awarded vs redeemed — last ${range} days`}>
