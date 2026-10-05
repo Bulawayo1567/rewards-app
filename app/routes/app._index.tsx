@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { LoaderFunctionArgs, HeadersFunction } from "react-router";
 import { Form, useLoaderData } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
@@ -150,7 +151,7 @@ export default function Dashboard() {
   const untiered = tierMix.length > 1 ? tierMix[0].count : 0;
   const attnCount = attention.expiring.length + attention.negative.length + attention.nearTier.length + (untiered ? 1 : 0);
   const todo = checklist.filter((c) => !c.ok);
-  const barW = Math.max(6, Math.floor(860 / days.length) - 4);
+  const [tab, setTab] = useState<"activity" | "attention">("activity");
 
   return (
     <s-page inlineSize="large">
@@ -173,8 +174,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Nav tiles */}
-      <style>{`.aas-tiles{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px;margin-bottom:6px}@media (max-width:760px){.aas-tiles{grid-template-columns:repeat(4,minmax(0,1fr))}}@media (max-width:520px){.aas-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+      <style>{`.aas-tiles{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px}@media (max-width:760px){.aas-tiles{grid-template-columns:repeat(4,minmax(0,1fr))}}@media (max-width:520px){.aas-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .aas-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:6px 0}
 @media (max-width:760px){.aas-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:560px){.aas-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -191,7 +191,7 @@ export default function Dashboard() {
 .aas-legend{display:flex;gap:12px;font-size:11px;color:#666;margin-top:4px}.aas-legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px;vertical-align:middle}
 .aas-row.tight{border-bottom:0;padding:2px 0 4px}
 .aas-panel{background:#fff;border:2px dashed #e3d9cc;border-radius:16px;padding:16px 18px;margin:8px 0}
-.aas-panel .aas-kpis{margin:14px 0 0;padding-top:14px;border-top:2px dashed #eee5d9;gap:0}
+.aas-panel .aas-kpis{margin:14px 0 0;gap:0}
 .aas-stat{position:relative;padding:4px 16px;min-width:0;border-left:2px dashed #eee5d9}
 .aas-panel .aas-kpis>.aas-stat:first-child{border-left:0;padding-left:2px}
 @media (max-width:760px){.aas-stat{border-left:0;padding:8px 6px}}
@@ -200,17 +200,24 @@ export default function Dashboard() {
 .aas-stat.hot .v{color:#c60d11}
 .aas-stat .s{font-size:12px;color:#666;margin-top:4px;line-height:1.35}
 .aas-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed #eee5d9}.aas-row span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.aas-row:last-of-type{border-bottom:0}`}</style>
-      <div className="aas-tiles">
-        {tiles.map((t) => (
-          <a key={t.href} href={t.href} style={{ textDecoration: "none", color: "#1f1f1f", background: "#fff", border: "2px dashed #e3d9cc", borderRadius: 12, padding: "12px 12px 10px", display: "block", transition: "border-color .15s" }}
-             onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#c60d11")} onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#e3d9cc")}>
-            <div style={{ fontSize: 22, lineHeight: 1 }}>{t.icon}</div>
-            <div style={{ fontWeight: 700, fontSize: 14, marginTop: 8 }}>{t.label}</div>
-            <div style={{ fontSize: 12, color: "#8a8a8a", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.sub}</div>
-          </a>
-        ))}
-      </div>
+.aas-row:last-of-type{border-bottom:0}
+.aas-tile{text-decoration:none;color:#1f1f1f;background:#fff;border:2px dashed #e3d9cc;border-radius:12px;padding:12px 12px 10px;display:block;transition:border-color .15s}
+.aas-tile:hover{border-color:#c60d11}
+.aas-sub{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:2px dashed #eee5d9}
+.aas-tabs{display:flex;gap:4px;border-bottom:2px dashed #eee5d9;margin:-4px -2px 12px}
+.aas-tab{appearance:none;border:0;background:none;font:inherit;font-weight:700;font-size:14px;padding:10px 14px;color:#8a8a8a;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
+.aas-tab.on{color:#1f1f1f;border-bottom-color:#c60d11}
+.aas-tab .n{display:inline-block;min-width:18px;padding:1px 6px;margin-left:6px;border-radius:999px;background:#c60d11;color:#fff;font-size:11px}
+.aas-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.aas-tbl th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#8a8a8a;font-weight:700;padding:8px 6px;border-bottom:2px dashed #eee5d9}
+.aas-tbl td{padding:9px 6px;border-bottom:1px dashed #eee5d9;vertical-align:middle}
+.aas-tbl tr:last-child td{border-bottom:0}
+.aas-tbl .num{text-align:right;font-variant-numeric:tabular-nums}
+.aas-pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#e8f5ec;color:#1b5e20}
+.aas-pill.neg{background:#fdecec;color:#8a1c1c}
+.aas-attn{border:1px dashed #e3d9cc;border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.aas-attn h4{margin:0 0 6px;font-size:14px}
+.aas-attn p{margin:4px 0;font-size:13px}`}</style>
 
       {/* Setup checklist / health */}
       {todo.length > 0 ? (
@@ -223,13 +230,20 @@ export default function Dashboard() {
         <s-banner tone="success" heading="Program is live">{liveCampaign ? `Pop-up live: ${liveCampaign.name}` : "No pop-up campaign is live"}</s-banner>
       )}
 
-      {/* Command panel: lookup + actions + stats in one */}
+      {/* Overview panel: nav tiles → stats → chart/tiers/rewards/segments */}
       <div className="aas-panel">
-        <div className="aas-bar">
-          <Form method="get" action="/app/customers" className="aas-find">
-            <s-text-field name="q" label="Find a member" labelAccessibilityVisibility="exclusive" placeholder="Find a member — email or name" />
-            <s-button type="submit" variant="primary">Look up</s-button>
-          </Form>
+        <div className="aas-tiles">
+          {tiles.map((t) => (
+            <a key={t.href} href={t.href} className="aas-tile">
+              <div style={{ fontSize: 22, lineHeight: 1 }}>{t.icon}</div>
+              <div style={{ fontWeight: 700, fontSize: 14, marginTop: 8 }}>{t.label}</div>
+              <div style={{ fontSize: 12, color: "#8a8a8a", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.sub}</div>
+            </a>
+          ))}
+        </div>
+
+        <div className="aas-sub">
+          <div className="aas-h" style={{ margin: 0 }}>Overview · last {range} days</div>
           <div className="aas-actions">
             {[7, 30, 90].map((r) => <s-button key={r} href={`/app?range=${r}`} variant={range === r ? "primary" : "secondary"}>{r}d</s-button>)}
             <s-button href="/app/campaigns">New campaign</s-button>
@@ -237,6 +251,7 @@ export default function Dashboard() {
             <s-button href="/app/export/ledger" target="_top">Export ledger</s-button>
           </div>
         </div>
+
         <div className="aas-kpis">
           <Stat label="Members" value={fmtInt(kpis.members)} sub={`+${fmtInt(kpis.newMembers)} in ${range}d`} />
           <Stat hot label="Points liability" value={fmtMoney0(kpis.liability)} sub={`${fmtInt(kpis.outstanding)} ${program.pointsName}${kpis.pending ? ` · ${fmtInt(kpis.pending)} pending` : ""}`} />
@@ -245,8 +260,8 @@ export default function Dashboard() {
           <Stat label="Code use" value={`${kpis.codeUseRate}%`} sub={`${fmtInt(kpis.codesUsed)} of ${fmtInt(kpis.codesIssued)} used · ${fmtInt(kpis.activeCodes)} active`} />
           <Stat label={`Pop-up (${range}d)`} value={fmtInt(kpis.plays)} sub={`${fmtInt(kpis.playsWithCode)} won codes · ${fmtInt(kpis.playCodesUsed)} ordered`} />
         </div>
+
         <div className="aas-cols4">
-          {/* Chart (compact) */}
           <div className="aas-col">
             <div className="aas-h">Awarded vs redeemed · {range}d</div>
             <svg viewBox="0 0 320 140" width="100%" style={{ display: "block" }} role="img" aria-label="Points awarded and redeemed over time">
@@ -267,10 +282,9 @@ export default function Dashboard() {
             <div className="aas-legend"><span><i style={{ background: "#c60d11" }} />Awarded</span><span><i style={{ background: "#1f1f1f" }} />Redeemed</span></div>
           </div>
 
-          {/* Tiers */}
           <div className="aas-col">
             <div className="aas-h">Members &amp; liability by tier</div>
-            {tierMix.map((t) => (
+            {tierMix.filter((t) => t.id !== null || t.count > 0).map((t) => (
               <div key={t.id ?? "none"} style={{ marginBottom: 8 }}>
                 <div className="aas-row tight"><span>{t.name}</span><b>{fmtInt(t.count)} · {fmtMoney0(t.liability)}</b></div>
                 <div style={{ height: 6, background: "#eee", borderRadius: 3 }}><div style={{ width: `${(t.count / maxTier) * 100}%`, height: "100%", background: "#c60d11", borderRadius: 3 }} /></div>
@@ -279,7 +293,6 @@ export default function Dashboard() {
             <s-link href="/app/tiers">Manage tiers</s-link>
           </div>
 
-          {/* Rewards */}
           <div className="aas-col">
             <div className="aas-h">Rewards · 90d</div>
             {topRewards.length === 0 ? <div className="aas-muted">No redemptions yet.</div> : topRewards.map((r) => (
@@ -288,7 +301,6 @@ export default function Dashboard() {
             <div style={{ marginTop: 8 }}><s-link href="/app/rewards">Manage rewards</s-link> · <s-link href="/app/product-rules">Product rules</s-link></div>
           </div>
 
-          {/* Segments */}
           <div className="aas-col">
             <div className="aas-h">Segments</div>
             {segments.map((x) => (
@@ -301,59 +313,59 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Attention */}
-      <s-section heading={`Needs attention${attnCount ? ` (${attnCount})` : ""}`}>
-        {attnCount === 0 && <s-text color="subdued">Nothing outstanding.</s-text>}
-        {untiered > 0 && (
-          <s-box padding="base" border="base" borderRadius="base">
-            <s-heading>{fmtInt(untiered)} members have no tier</s-heading>
-            <s-paragraph>Usually members imported before tiers existed. <s-link href="/app/tiers">Recalculate all members</s-link> to place everyone.</s-paragraph>
-          </s-box>
-        )}
-        {attention.nearTier.length > 0 && (
-          <s-box padding="base" border="base" borderRadius="base">
-            <s-heading>Close to the next tier — worth a nudge</s-heading>
-            {attention.nearTier.map((c) => <s-paragraph key={c.id}><s-link href={`/app/customers/${c.id}`}>{c.name}</s-link> needs {fmtInt(c.needed)} more for <b>{c.tier}</b></s-paragraph>)}
-          </s-box>
-        )}
-        {attention.expiring.length > 0 && (
-          <s-box padding="base" border="base" borderRadius="base">
-            <s-heading>Codes expiring within 7 days</s-heading>
-            {attention.expiring.map((r) => <s-paragraph key={r.id}><s-link href={`/app/customers/${r.customerId}`}>{r.who}</s-link> — {r.reward} <code>{r.code}</code> · {fmtDate(r.expiresAt)}</s-paragraph>)}
-          </s-box>
-        )}
-        {attention.negative.length > 0 && (
-          <s-box padding="base" border="base" borderRadius="base">
-            <s-heading>Negative balances (refund clawbacks)</s-heading>
-            {attention.negative.map((c) => <s-paragraph key={c.id}><s-link href={`/app/customers/${c.id}`}>{c.who}</s-link> · {fmtInt(c.balance)}</s-paragraph>)}
-          </s-box>
-        )}
-      </s-section>
+      {/* Activity panel: search + tabs (Recent activity | Needs attention) */}
+      <div className="aas-panel">
+        <div className="aas-tabs">
+          <button type="button" className={`aas-tab${tab === "activity" ? " on" : ""}`} onClick={() => setTab("activity")}>Recent activity</button>
+          <button type="button" className={`aas-tab${tab === "attention" ? " on" : ""}`} onClick={() => setTab("attention")}>Needs attention{attnCount > 0 && <span className="n">{attnCount}</span>}</button>
+        </div>
 
-      {/* Recent activity (migration rows hidden) */}
-      <s-section heading="Recent activity" padding="none">
-        <s-table>
-          <s-table-header-row>
-            <s-table-header listSlot="primary">Member</s-table-header>
-            <s-table-header>Type</s-table-header>
-            <s-table-header format="numeric">Points</s-table-header>
-            <s-table-header listSlot="secondary">Note</s-table-header>
-            <s-table-header>When</s-table-header>
-          </s-table-header-row>
-          <s-table-body>
-            {recent.map((r) => (
-              <s-table-row key={r.id}>
-                <s-table-cell><s-link href={`/app/customers/${r.customer.id}`}>{[r.customer.firstName, r.customer.lastName].filter(Boolean).join(" ") || r.customer.email}</s-link></s-table-cell>
-                <s-table-cell><s-badge tone={r.points < 0 ? "critical" : "success"}>{r.type}</s-badge></s-table-cell>
-                <s-table-cell>{r.points > 0 ? `+${fmtInt(r.points)}` : fmtInt(r.points)}</s-table-cell>
-                <s-table-cell>{r.note ?? ""}</s-table-cell>
-                <s-table-cell>{fmtDate(r.createdAt)}</s-table-cell>
-              </s-table-row>
-            ))}
-            {recent.length === 0 && <s-table-row><s-table-cell>No activity since the import yet.</s-table-cell></s-table-row>}
-          </s-table-body>
-        </s-table>
-      </s-section>
+        {tab === "activity" && (
+          <>
+            <Form method="get" action="/app/customers" className="aas-find" style={{ maxWidth: 520, marginBottom: 12 }}>
+              <s-text-field name="q" label="Find a member" labelAccessibilityVisibility="exclusive" placeholder="Find a member — email or name" />
+              <s-button type="submit" variant="primary">Look up</s-button>
+            </Form>
+            <table className="aas-tbl">
+              <thead><tr><th>Member</th><th>Type</th><th className="num">{program.pointsName}</th><th>Note</th><th>When</th></tr></thead>
+              <tbody>
+                {recent.map((r) => (
+                  <tr key={r.id}>
+                    <td><s-link href={`/app/customers/${r.customer.id}`}>{[r.customer.firstName, r.customer.lastName].filter(Boolean).join(" ") || r.customer.email}</s-link></td>
+                    <td><span className={`aas-pill${r.points < 0 ? " neg" : ""}`}>{r.type}</span></td>
+                    <td className="num"><b>{r.points > 0 ? `+${fmtInt(r.points)}` : fmtInt(r.points)}</b></td>
+                    <td style={{ color: "#555" }}>{r.note ?? ""}</td>
+                    <td style={{ color: "#555", whiteSpace: "nowrap" }}>{fmtDate(r.createdAt)}</td>
+                  </tr>
+                ))}
+                {recent.length === 0 && <tr><td colSpan={5} className="aas-muted">No activity since the import yet.</td></tr>}
+              </tbody>
+            </table>
+            <div style={{ marginTop: 10 }}><s-link href="/app/customers">View all members</s-link></div>
+          </>
+        )}
+
+        {tab === "attention" && (
+          <>
+            {attnCount === 0 && <div className="aas-muted">Nothing outstanding.</div>}
+            {untiered > 0 && (
+              <div className="aas-attn"><h4>{fmtInt(untiered)} members have no tier</h4><p>Usually members imported before tiers existed. <s-link href="/app/tiers">Recalculate all members</s-link> to place everyone.</p></div>
+            )}
+            {attention.nearTier.length > 0 && (
+              <div className="aas-attn"><h4>Close to the next tier — worth a nudge</h4>
+                {attention.nearTier.map((c) => <p key={c.id}><s-link href={`/app/customers/${c.id}`}>{c.name}</s-link> needs {fmtInt(c.needed)} more for <b>{c.tier}</b></p>)}</div>
+            )}
+            {attention.expiring.length > 0 && (
+              <div className="aas-attn"><h4>Codes expiring within 7 days</h4>
+                {attention.expiring.map((r) => <p key={r.id}><s-link href={`/app/customers/${r.customerId}`}>{r.who}</s-link> — {r.reward} <code>{r.code}</code> · {fmtDate(r.expiresAt)}</p>)}</div>
+            )}
+            {attention.negative.length > 0 && (
+              <div className="aas-attn"><h4>Negative balances (refund clawbacks)</h4>
+                {attention.negative.map((c) => <p key={c.id}><s-link href={`/app/customers/${c.id}`}>{c.who}</s-link> · {fmtInt(c.balance)}</p>)}</div>
+            )}
+          </>
+        )}
+      </div>
     </s-page>
   );
 }
