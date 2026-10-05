@@ -48,7 +48,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   return redirect(`/app/campaigns/${c.id}`);
 };
 
-const KIND: Record<string, string> = { WHEEL: "Spin wheel", SCRATCH: "Scratch card", INSTANT: "Instant win" };
 
 const KIND: Record<string, string> = { WHEEL: "Spin wheel", SCRATCH: "Scratch card", INSTANT: "Instant win" };
 const KICON: Record<string, string> = { WHEEL: "🎡", SCRATCH: "🎟️", INSTANT: "🎁" };
