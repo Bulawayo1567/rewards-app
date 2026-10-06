@@ -17,7 +17,7 @@ const clean = (s: string | null, max = 40) => esc(String(s ?? "").slice(0, max))
 const pin = (x: number, y: number, rot: number, len = 70) =>
   `<g transform="translate(${x} ${y}) rotate(${rot})"><circle cx="0" cy="0" r="9" fill="${RED}"/><circle cx="-3" cy="-3" r="3" fill="rgba(255,255,255,.55)"/><rect x="-1.5" y="8" width="3" height="${len - 18}" rx="1.5" fill="#9a9a9a"/><path d="M-1.5 ${len - 12} L0 ${len - 8} L1.5 ${len - 12}Z" fill="#666"/></g>`;
 
-function banner(t: string, sub: string) {
+function banner() {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="220" viewBox="0 0 1200 220">
   <defs>
     <pattern id="g" width="28" height="28" patternUnits="userSpaceOnUse"><rect width="28" height="28" fill="${CREAM}"/><rect width="14" height="28" fill="rgba(198,13,17,.13)"/><rect width="28" height="14" fill="rgba(198,13,17,.13)"/></pattern>
@@ -26,8 +26,7 @@ function banner(t: string, sub: string) {
   </defs>
   <rect width="1200" height="220" rx="20" fill="url(#g)"/><rect width="1200" height="220" rx="20" fill="url(#w)"/>
   <rect x="14" y="14" width="1172" height="192" rx="12" fill="none" stroke="rgba(31,31,31,.3)" stroke-width="3" stroke-dasharray="10 8"/>
-  <text x="600" y="${sub ? 112 : 128}" text-anchor="middle" font-family="${FONT}" font-weight="800" font-size="46" fill="${INK}">${t}</text>
-  ${sub ? `<text x="600" y="152" text-anchor="middle" font-family="${FONT}" font-weight="500" font-size="20" fill="#444">${sub}</text>` : ""}
+  <text x="600" y="128" text-anchor="middle" font-family="${FONT}" font-weight="800" font-size="46" fill="${INK}">All About Sewing Rewards</text>
   <g filter="url(#sh)">${pin(60, 30, -28)}${pin(1140, 190, 152)}</g>
 </svg>`;
 }
@@ -93,34 +92,6 @@ function icon() {
 `;
 }
 
-/** Tape-measure progress bar, p = percent filled */
-function tape(p: number) {
-  const w = 300, h = 24;
-  let ticks = "";
-  for (let x = 0; x <= w; x += 6) { const long = x % 30 === 0, mid = x % 15 === 0; ticks += `<line x1="${x}" y1="${h}" x2="${x}" y2="${h - (long ? 10 : mid ? 7 : 4)}" stroke="${INK}" stroke-width="${long ? 1.4 : 1}"/>`; }
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
-  <rect x="0.75" y="0.75" width="${w - 1.5}" height="${h - 1.5}" rx="4" fill="#f7f3ea" stroke="${INK}" stroke-width="1.5"/>
-  <rect x="1.5" y="1.5" width="${Math.max(0, (w - 3) * p / 100)}" height="${h - 3}" rx="3" fill="${RED}" opacity=".85"/>
-  <g opacity=".7">${ticks}</g>
-</svg>`;
-}
-
-/** Small sewing icons for reward / earn cards */
-function sicon(k: string) {
-  const inner: Record<string, string> = {
-    tag: `<path d="M8 4h22l10 10-16 16L8 14z" fill="#fff" stroke="${RED}" stroke-width="2.4" stroke-dasharray="4 3" stroke-linejoin="round"/><circle cx="16" cy="12" r="3" fill="${RED}"/>`,
-    spool: `<rect x="10" y="7" width="20" height="5" rx="2" fill="#8c7b74"/><rect x="10" y="28" width="20" height="5" rx="2" fill="#8c7b74"/><rect x="14" y="12" width="12" height="16" fill="${RED}"/><path d="M14 15h12M14 19h12M14 23h12" stroke="rgba(255,255,255,.5)" stroke-width="1.4"/>`,
-    scissors: `<circle cx="13" cy="29" r="5" fill="none" stroke="${INK}" stroke-width="2.2"/><circle cx="13" cy="11" r="5" fill="none" stroke="${INK}" stroke-width="2.2"/><path d="M17 14l16 14M17 26l16-14" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/>`,
-    pin: `<circle cx="14" cy="12" r="6" fill="${RED}"/><circle cx="12" cy="10" r="2" fill="rgba(255,255,255,.55)"/><path d="M18 16l12 12" stroke="#9a9a9a" stroke-width="3" stroke-linecap="round"/><path d="M29 27l3 3-1 1-3-3z" fill="#666"/>`,
-    button: `<circle cx="20" cy="20" r="14" fill="${BLUSH}" stroke="${RED}" stroke-width="2"/><circle cx="15" cy="15" r="2.2" fill="${RED}"/><circle cx="25" cy="15" r="2.2" fill="${RED}"/><circle cx="15" cy="25" r="2.2" fill="${RED}"/><circle cx="25" cy="25" r="2.2" fill="${RED}"/>`,
-    needle: `<path d="M8 32 C 14 18, 22 12, 32 8" stroke="${INK}" stroke-width="3" stroke-linecap="round"/><ellipse cx="29" cy="11" rx="2.2" ry="4" transform="rotate(35 29 11)" fill="${CREAM}"/><path d="M8 32c-4 2-3 6 1 5" stroke="${RED}" stroke-width="2" fill="none" stroke-linecap="round"/>`,
-    thimble: `<path d="M13 34 V18 a7 7 0 0 1 14 0 v16" fill="#cfc7bc" stroke="#8c7b74" stroke-width="2"/><path d="M13 17 a7 7 0 0 1 14 0" fill="#e4ddd2"/><g fill="#8c7b74"><circle cx="16" cy="14" r="1.1"/><circle cx="20" cy="12" r="1.1"/><circle cx="24" cy="14" r="1.1"/><circle cx="18" cy="17.5" r="1.1"/><circle cx="22" cy="17.5" r="1.1"/><circle cx="20" cy="21" r="1.1"/></g><rect x="11" y="33" width="18" height="3.5" rx="1.5" fill="#8c7b74"/><path d="M13 27h14" stroke="#8c7b74" stroke-width="1.2" stroke-dasharray="2 2"/>`,
-    cushion: `<ellipse cx="20" cy="22" rx="14" ry="11" fill="${RED}"/><path d="M20 11c-8 3-12 10-12 18M20 11c8 3 12 10 12 18" stroke="rgba(255,255,255,.5)" stroke-width="1.6" stroke-dasharray="3 3" fill="none"/><path d="M20 11c-2-3 1-5 2-2c2-3 5-1 2 2c3 0 3 3 0 3c2 3-1 5-2 2c-2 3-5 1-2-2c-3 0-3-3 0-3z" fill="#3f8f4a"/><path d="M14 18l-3-7" stroke="#9a9a9a" stroke-width="1.8"/><circle cx="11" cy="10" r="2" fill="${INK}"/>`,
-  };
-  const body = inner[k] ?? inner.button;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">${body}</svg>`;
-}
-
 function button() {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="${BLUSH}" stroke="${RED}" stroke-width="1.5"/><circle cx="7" cy="7" r="1.4" fill="${RED}"/><circle cx="13" cy="7" r="1.4" fill="${RED}"/><circle cx="7" cy="13" r="1.4" fill="${RED}"/><circle cx="13" cy="13" r="1.4" fill="${RED}"/></svg>`;
 }
@@ -129,9 +100,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const q = new URL(request.url).searchParams;
   let svg = "";
   switch (params.kind) {
-    case "banner": svg = banner(clean(q.get("t"), 40) || "Rewards", clean(q.get("s"), 90)); break;
-    case "tape": svg = tape(Math.max(0, Math.min(100, Number(q.get("p") ?? 0)))); break;
-    case "sicon": svg = sicon(clean(q.get("k"), 12)); break;
+    case "banner": svg = banner(); break;
     case "tag": svg = tag(clean(q.get("n"), 12) || "0", clean(q.get("u"), 16) || "points"); break;
     case "worth": svg = worth(clean(q.get("t"), 14) || "$0.00"); break;
     case "ribbon": svg = ribbon(clean(q.get("t"), 40) || "Rewards"); break;

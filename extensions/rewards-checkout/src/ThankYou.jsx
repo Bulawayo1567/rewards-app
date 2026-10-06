@@ -24,11 +24,15 @@ function ThankYou() {
   if (earned <= 0) return null;
   const worth = (earned * p.pointValueCents) / 100;
   const loggedIn = !!shopify?.buyerIdentity?.customer?.value?.id;
+  const storeUrl = (shopify?.shop?.storefrontUrl || `https://${shopDomain}`).replace(/\/$/, "");
   return (
     <s-box padding="base" border="base" borderRadius="base" background="subdued">
       <s-stack gap="small">
         <s-text emphasis="bold">🧵 You just earned about {fmt(earned)} {p.pointsName}{worth > 0 ? ` — worth ${money(worth)} toward your next order` : ""}</s-text>
         <s-text tone="subdued">{loggedIn ? `They'll show in your rewards account once the order is paid.` : `Create an account with this email to keep them — then spend them any time from your rewards page.`}</s-text>
+        <s-stack direction="inline" gap="small">
+          <s-button variant="primary" href={`${storeUrl}/account`}>{loggedIn ? "See my rewards" : "Create an account"}</s-button>
+        </s-stack>
       </s-stack>
     </s-box>
   );

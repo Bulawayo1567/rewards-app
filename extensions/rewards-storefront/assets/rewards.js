@@ -132,7 +132,8 @@
 
   function mountProduct() {
     if (!cfg.productPoints || cfg.template !== "product" || !cfg.product) return;
-    const target = (cfg.productSelector || ".price").split(",").map((s) => document.querySelector(s.trim())).find(Boolean);
+    let target = (cfg.productSelector === "auto" ? "" : cfg.productSelector || "").split(",").map((s) => s.trim()).filter(Boolean).map((s) => document.querySelector(s)).find(isVisible);
+    if (!target) { const form = document.querySelector('form[action*="/cart/add"]'); const scope = (form && form.closest("section, .product, .product-single, main")) || document; target = priceElements(scope)[0]; }
     if (!target) return;
     const line = document.createElement("div"); line.className = "aas-rw-product"; line.style.setProperty("--acc", cfg.color || "#c60d11");
     target.insertAdjacentElement("afterend", line);
@@ -151,32 +152,73 @@
     document.addEventListener("change", (e) => { if (e.target && /variant|option/i.test(e.target.name || "")) setTimeout(update, 50); });
   }
 
+
+  // ── Price discovery (theme-agnostic) ──
+  const PRICE_RX = /\$\s?\d[\d,]*(?:\.\d{1,2})?/;
+  const isVisible = (el) => !!(el && (el.offsetWidth || el.offsetHeight || el.getClientRects().length));
+  function priceElements(scope) {
+    const cands = Array.from(scope.querySelectorAll('[class*="price" i], [data-price], .money')).filter((el) => isVisible(el) && PRICE_RX.test(el.textContent || "") && !el.closest(".aas-rw-product, .aas-rewards-panel, .aas-rw-badge"));
+    // keep outermost price containers only (drop children of another candidate)
+    return cands.filter((el) => !cands.some((o) => o !== el && o.contains(el)));
+  }
+  function salePrice(el) {
+    // if the element contains a struck-out compare-at price, ignore it
+    const copy = el.cloneNode(true);
+    copy.querySelectorAll('s, del, strike, [class*="compare" i], [class*="was" i], [class*="old" i], [class*="regular" i]').forEach((n) => n.remove());
+    const m = (copy.textContent || "").match(/\d[\d,]*(?:\.\d{1,2})?/g);
+    if (!m) return 0;
+    return Math.min(...m.map((x) => Number(x.replace(/,/g, ""))));
+  }
+
   // ── Product-card badges: "Earn N points" under card prices, computed from the card's price × base rate × tier ──
   function mountCardBadges() {
     if (!cfg.cardBadges) return;
-    const sel = (cfg.cardSelector || "").split(",").map((s) => s.trim()).filter(Boolean);
-    if (!sel.length) return;
+    const sel = (cfg.cardSelector === "auto" ? "" : cfg.cardSelector || "").split(",").map((s) => s.trim()).filter(Boolean);
     let rate = null;
-    const parsePrice = (el) => { const m = (el.textContent || "").replace(/[^0-9.,]/g, " ").match(/\d[\d,]*(?:\.\d{1,2})?/g); if (!m) return 0; return Math.min(...m.map((x) => Number(x.replace(/,/g, "")))); };
+    const findPriceEls = () => {
+      const fromSel = sel.flatMap((q) => Array.from(document.querySelectorAll(q)));
+      if (fromSel.length) return fromSel;
+      // auto: every product link's card → its price element
+      const out = new Set();
+      document.querySelectorAll('a[href*="/products/"]').forEach((a) => {
+        if (a.closest('form[action*="/cart/add"]')) return;                 // main product form, not a card
+        const card = a.closest('[class*="product-item" i], [class*="product-card" i], [class*="grid-item" i], [class*="card" i], li, article') || a.parentElement;
+        if (!card || card.dataset.aasCardScanned) return;
+        const p = priceElements(card)[0];
+        if (p) out.add(p);
+      });
+      return Array.from(out);
+    };
+    const handleOf = (priceEl) => { const card = priceEl.closest('[class*="card" i], [class*="product-item" i], [class*="grid-item" i], li, article') || priceEl.parentElement; const a = card && card.querySelector('a[href*="/products/"]'); const m = a && a.getAttribute("href").match(/\/products\/([^/?#]+)/); return m ? m[1] : null; };
+    let timer = null;
     const apply = () => {
       if (rate == null) return;
-      sel.forEach((q) => document.querySelectorAll(q).forEach((priceEl) => {
+      const batch = [];
+      findPriceEls().forEach((priceEl) => {
         if (priceEl.dataset.aasBadged || priceEl.closest(".aas-rw-product, .aas-rewards-panel")) return;
-        const price = parsePrice(priceEl);
-        if (!(price > 0)) return;
-        const pts = Math.floor(price * rate);
-        if (pts <= 0) return;
+        const price = salePrice(priceEl), handle = handleOf(priceEl);
+        if (!(price > 0) || !handle) return;
         priceEl.dataset.aasBadged = "1";
-        const b = document.createElement("span"); b.className = "aas-rw-badge"; b.style.setProperty("--acc", cfg.color || "#c60d11");
-        b.textContent = `Earn ${fmt(pts)} ${cfg.pointsName || "points"}`;
-        priceEl.insertAdjacentElement("afterend", b);
-      }));
+        batch.push({ priceEl, handle, price });
+      });
+      if (!batch.length) return;
+      fetch(api("estimate-batch"), { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ items: batch.map((b) => ({ handle: b.handle, price: b.price })) }) })
+        .then((r) => r.json()).then((j) => {
+          batch.forEach((b) => {
+            const pts = j.points && j.points[b.handle];
+            if (!(pts > 0)) return;
+            const el = document.createElement("span"); el.className = "aas-rw-badge"; el.style.setProperty("--acc", cfg.color || "#c60d11");
+            el.textContent = `Earn ${fmt(pts)} ${j.pointsName || cfg.pointsName || "points"}`;
+            b.priceEl.insertAdjacentElement("afterend", el);
+          });
+        }).catch(() => {});
     };
+    const applyDebounced = () => { clearTimeout(timer); timer = setTimeout(apply, 150); };
     load().then((d) => {
       cfg.pointsName = d.program.pointsName;
       rate = d.program.pointsPerDollar * (d.loggedIn && d.me && d.me.tier ? d.me.tier.multiplier : 1);
       apply();
-      new MutationObserver(() => apply()).observe(document.body, { childList: true, subtree: true });
+      new MutationObserver(applyDebounced).observe(document.body, { childList: true, subtree: true });
     }).catch(() => {});
   }
 
