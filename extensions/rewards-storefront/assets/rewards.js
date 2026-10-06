@@ -131,27 +131,37 @@
   }
 
   function mountProduct() {
-    if (!cfg.productPoints || cfg.template !== "product" || !cfg.product) return;
-    let target = (cfg.productSelector === "auto" ? "" : cfg.productSelector || "").split(",").map((s) => s.trim()).filter(Boolean).map((s) => document.querySelector(s)).find(isVisible);
-    if (!target) { const form = document.querySelector('form[action*="/cart/add"]'); const scope = (form && form.closest("section, .product, .product-single, main")) || document; target = priceElements(scope)[0]; }
-    if (!target) return;
-    const line = document.createElement("div"); line.className = "aas-rw-product"; line.style.setProperty("--acc", cfg.color || "#c60d11");
-    target.insertAdjacentElement("afterend", line);
-    const currentVariant = () => { const u = new URLSearchParams(location.search).get("variant"); return u ? Number(u) : cfg.product.selected; };
-    const update = async () => {
-      const vid = currentVariant(); const i = cfg.product.variants.indexOf(vid);
-      const price = (i >= 0 ? cfg.product.prices[i] : cfg.product.prices[0]) / 100;
-      try {
-        const r = await fetch(api(`estimate?product=${cfg.product.id}&variant=${vid}&vendor=${encodeURIComponent(cfg.product.vendor || "")}&price=${price}`), { credentials: "same-origin", headers: { Accept: "application/json" } });
-        const j = await r.json();
-        line.innerHTML = j.points > 0 ? `Earn <b>${fmt(j.points)} ${esc(j.pointsName || "points")}</b> with this purchase${cfg.loggedIn ? "" : ` · <a href="${cfg.registerUrl}">join free</a>`}` : "";
-      } catch (_) { line.innerHTML = ""; }
+    if (!cfg.productPoints) return;
+    const m = location.pathname.match(/\/products\/([^/?#]+)/);
+    if (!m) return;
+    const start = (product) => {
+      if (!product || !product.variants || !product.variants.length) return;
+      let target = (cfg.productSelector === "auto" ? "" : cfg.productSelector || "").split(",").map((s) => s.trim()).filter(Boolean).map((s) => document.querySelector(s)).find(isVisible);
+      if (!target) { const form = document.querySelector('form[action*="/cart/add"]'); const scope = (form && form.closest("section, .product, .productView, .product-single, main")) || document; target = priceElements(scope)[0]; }
+      if (!target) return;
+      const line = document.createElement("div"); line.className = "aas-rw-product"; line.style.setProperty("--acc", cfg.color || "#c60d11");
+      target.insertAdjacentElement("afterend", line);
+      const currentVariant = () => { const u = new URLSearchParams(location.search).get("variant"); const v = u ? product.variants.find((x) => String(x.id) === u) : null; return v || product.variants.find((x) => x.available) || product.variants[0]; };
+      const update = async () => {
+        const v = currentVariant(); const price = (v.price || 0) / 100;
+        try {
+          const r = await fetch(api(`estimate?product=${product.id}&variant=${v.id}&vendor=${encodeURIComponent(product.vendor || "")}&price=${price}`), { credentials: "same-origin", headers: { Accept: "application/json" } });
+          const j = await r.json();
+          line.innerHTML = j.points > 0 ? `Earn <b>${fmt(j.points)} ${esc(j.pointsName || "points")}</b> with this purchase${cfg.loggedIn ? "" : ` · <a href="${cfg.registerUrl}">join free</a>`}` : "";
+        } catch (_) { line.innerHTML = ""; }
+      };
+      update();
+      window.addEventListener("popstate", update);
+      document.addEventListener("change", (e) => { if (e.target && /variant|option|id/i.test(e.target.name || "")) setTimeout(update, 60); });
     };
-    update();
-    window.addEventListener("popstate", update);
-    document.addEventListener("change", (e) => { if (e.target && /variant|option/i.test(e.target.name || "")) setTimeout(update, 50); });
+    if (cfg.product && cfg.product.variants && cfg.product.prices) {
+      // Liquid gave us the product (true product template)
+      start({ id: cfg.product.id, vendor: cfg.product.vendor, variants: cfg.product.variants.map((id, i) => ({ id, price: cfg.product.prices[i], available: true })) });
+    } else {
+      // Page-template product (e.g. GemPages): read the product JSON
+      fetch(root + "products/" + m[1] + ".js", { headers: { Accept: "application/json" } }).then((r) => r.json()).then(start).catch(() => {});
+    }
   }
-
 
   // ── Price discovery (theme-agnostic) ──
   const PRICE_RX = /\$\s?\d[\d,]*(?:\.\d{1,2})?/;
