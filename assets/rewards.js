@@ -140,12 +140,11 @@
     const start = (product) => {
       if (!product || !product.variants || !product.variants.length) return;
       const main = MAIN();
-      const resolveTarget = () => {
-        let t = (cfg.productSelector === "auto" ? "" : cfg.productSelector || "").split(",").map((s) => s.trim()).filter(Boolean).flatMap((s) => Array.from(main.querySelectorAll(s))).find(isVisible);
-        if (!t) { const form = main.querySelector('form[action*="/cart/add"]'); const scope = (form && form.closest("section, .product, .productView, .product-single")) || main; t = priceElements(scope)[0]; }
-        return t || null;
-      };
+      let target = (cfg.productSelector === "auto" ? "" : cfg.productSelector || "").split(",").map((s) => s.trim()).filter(Boolean).map((s) => main.querySelector(s)).find(isVisible);
+      if (!target) { const form = main.querySelector('form[action*="/cart/add"]'); const scope = (form && form.closest("section, .product, .productView, .product-single")) || main; target = priceElements(scope)[0]; }
+      if (!target) return;
       const line = document.createElement("div"); line.className = "aas-rw-product"; line.style.setProperty("--acc", cfg.color || "#c60d11");
+      target.insertAdjacentElement("afterend", line);
       const currentVariant = () => { const u = new URLSearchParams(location.search).get("variant"); const v = u ? product.variants.find((x) => String(x.id) === u) : null; return v || product.variants.find((x) => x.available) || product.variants[0]; };
       const update = async () => {
         const v = currentVariant(); const price = (v.price || 0) / 100;
@@ -155,18 +154,7 @@
           line.innerHTML = j.points > 0 ? `Earn <b>${fmt(j.points)} ${esc(j.pointsName || "points")}</b> with this purchase${cfg.loggedIn ? "" : ` · <a href="${cfg.registerUrl}">join free</a>`}` : "";
         } catch (_) { line.innerHTML = ""; }
       };
-      const place = () => {
-        if (main.querySelector(".aas-rw-product") && document.contains(line)) return false;
-        const t = resolveTarget();
-        if (!t) return false;
-        t.insertAdjacentElement("afterend", line);
-        return true;
-      };
-      if (place()) update();
-      // Ella re-renders the product section a moment after load (sections= fetch) and drops our line; put it back.
-      let t2 = null;
-      new MutationObserver(() => { clearTimeout(t2); t2 = setTimeout(() => { if (!document.contains(line) && place()) update(); }, 150); })
-        .observe(main === document ? document.body : main, { childList: true, subtree: true });
+      update();
       window.addEventListener("popstate", update);
       document.addEventListener("change", (e) => { if (e.target && /variant|option|id/i.test(e.target.name || "")) setTimeout(update, 60); });
     };
@@ -216,16 +204,7 @@
       });
       return Array.from(out);
     };
-    const handleOf = (priceEl) => {
-      // walk up from the parent until an ancestor carries the handle or a product link
-      let el = priceEl.parentElement;
-      for (let i = 0; el && i < 8; i++, el = el.parentElement) {
-        if (el.dataset && el.dataset.productHandle) return el.dataset.productHandle;
-        const a = el.querySelector('a[href*="/products/"]');
-        if (a) { const m = a.getAttribute("href").match(/\/products\/([^/?#]+)/); if (m) return m[1]; }
-      }
-      return null;
-    };
+    const handleOf = (priceEl) => { const card = priceEl.closest('[class*="card" i], [class*="product-item" i], [class*="grid-item" i], li, article') || priceEl.parentElement; const a = card && card.querySelector('a[href*="/products/"]'); const m = a && a.getAttribute("href").match(/\/products\/([^/?#]+)/); return m ? m[1] : null; };
     let timer = null;
     const apply = () => {
       if (rate == null) return;

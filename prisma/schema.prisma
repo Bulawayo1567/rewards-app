@@ -6,8 +6,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ─── Shopify session (required by the template) ───────────────────────────────
@@ -48,6 +49,10 @@ model Program {
   earnOnTax             Boolean  @default(false)
   active                Boolean  @default(true)
   codePrefix            String   @default("RW")
+    judgemeToken        String?
+  mailchimpEnabled    Boolean  @default(false)
+  mailchimpApiKey     String?
+  mailchimpAudienceId String?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }

@@ -1,20 +1,7 @@
-EARN ACTIONS + CARD BADGES + THANK-YOU BLOCK
+INTEGRATIONS — Judge.me review points, Mailchimp merge-field sync (newsletter award already live via customers/update).
 
-1) Unzip into C:\Users\info\Downloads\rewards-app\ (merge; YES to replace):
-     app\routes\proxy.account.subscribe.tsx   (new)
-     app\routes\public.program.tsx            (new)
-     app\routes\img.$kind.tsx                 (thimble icon)
-     extensions\rewards-account\src\RewardsPage.jsx
-     extensions\rewards-storefront\assets\rewards.js, rewards.css
-     extensions\rewards-storefront\blocks\rewards-embed.liquid
-     extensions\rewards-checkout\src\ThankYou.jsx   (new extension — see step 3)
-
-2) git add/commit/push  (backend)
-
-3) Thank-you block:  shopify app generate extension → Checkout UI → rewards-checkout → Preact
-   Then follow extensions\rewards-checkout\shopify.extension.toml.SNIPPET.
-
-4) shopify app deploy -c all-about-sewing-rewards
-
-5) Theme editor → App embeds → Rewards widget → "Show 'Earn N points' badge on product cards" (on by default).
-   Settings → Checkout → Customize → Thank you page → Add block → Rewards checkout → Save.
+1) Unzip into C:\Users\info\Downloads\rewards-app\ (merge; YES to replace customers.server.ts and app.settings.tsx).
+2) prisma\PATCH.txt → add the 4 Program fields → npx prisma migrate dev --name integrations
+3) git add/commit/push.
+4) App → Settings → Integrations: copy the Judge.me webhook URL into Judge.me (Settings → Integrations → Webhooks, event review/published);
+   paste Mailchimp API key + audience ID, switch sync on, Save (it verifies and creates REWARDPTS / REWARDTIER).

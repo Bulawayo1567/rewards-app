@@ -8,13 +8,19 @@ import { getProgram } from "../lib/rewards/program.server";
 import { useActionToast } from "../lib/rewards/use-toast";
 import { str, num, bool } from "../lib/rewards/format";
 import { Hero, UIStyles, Tabs, SETTINGS_TABS, Card, Field, Toggle, Chip, Ribbon } from "../lib/rewards/ui";
+import { ensureMergeFields } from "../lib/rewards/mailchimp.server";
+import { randomBytes } from "node:crypto";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
-  const p = await getProgram(session.shop);
+  let p = await getProgram(session.shop);
+  if (!p.judgemeToken) p = await prisma.program.update({ where: { shop: session.shop }, data: { judgemeToken: randomBytes(12).toString("hex") } });
+  const judgemeUrl = `${process.env.SHOPIFY_APP_URL || ""}/webhooks/judgeme/review?shop=${session.shop}&token=${p.judgemeToken}`;
   // Decimal fields must be converted to plain numbers before they reach the form.
   return {
+    judgemeUrl,
     program: {
+      mailchimpEnabled: p.mailchimpEnabled, mailchimpApiKeySet: !!p.mailchimpApiKey, mailchimpAudienceId: p.mailchimpAudienceId ?? "",
       name: p.name, pointsName: p.pointsName, active: p.active,
       pointsPerDollar: Number(p.pointsPerDollar), pointValueCents: Number(p.pointValueCents ?? 1),
       holdDays: p.holdDays, expiryMonths: p.expiryMonths ?? 0, minRedeemPoints: p.minRedeemPoints,
@@ -27,6 +33,18 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const current = await getProgram(session.shop);
   const fd = await request.formData();
+  if (str(fd, "intent") === "integrations") {
+    const enabled = bool(fd, "mailchimpEnabled");
+    const key = str(fd, "mailchimpApiKey") || current.mailchimpApiKey || null;
+    const aud = str(fd, "mailchimpAudienceId") || null;
+    let message = "Integrations saved";
+    if (enabled) {
+      if (!key || !aud) return { error: "Mailchimp needs an API key and an audience ID." };
+      try { message = await ensureMergeFields(key, aud); } catch (e) { return { error: (e as Error).message }; }
+    }
+    await prisma.program.update({ where: { shop: session.shop }, data: { mailchimpEnabled: enabled, mailchimpApiKey: key, mailchimpAudienceId: aud } });
+    return { ok: true, message };
+  }
   const ppd = num(fd, "pointsPerDollar", Number(current.pointsPerDollar));
   const pv = num(fd, "pointValueCents", Number(current.pointValueCents ?? 1));
   if (ppd <= 0) return { error: "Points per $1 must be greater than 0." };
@@ -52,9 +70,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Settings() {
-  const { program } = useLoaderData<typeof loader>();
+  const { program, judgemeUrl } = useLoaderData<typeof loader>();
   const nav = useNavigation();
   useActionToast();
+  const [mc, setMc] = useState(program.mailchimpEnabled);
   const saving = nav.state !== "idle";
   const [rate, setRate] = useState(program.pointsPerDollar);
   const [cents, setCents] = useState(program.pointValueCents);
@@ -118,6 +137,29 @@ export default function Settings() {
             </div>
           </aside>
         </div>
+      </Form>
+
+      <Form method="post">
+        <input type="hidden" name="intent" value="integrations" />
+        <Card icon="🔌" title="Integrations" sub="Judge.me reviews and Mailchimp — the two Smile integrations in use.">
+          <div className="st-grid two">
+            <div>
+              <div className="aas-h">Judge.me · review points</div>
+              <p className="aas-muted" style={{ fontSize: 13, margin: "0 0 8px" }}>In Judge.me → Settings → Integrations → <b>Webhooks</b>, add this URL for the <b>review/published</b> (or review/updated) event. Points are awarded once per customer and product, matched by the reviewer's email, using the "Write a product review" rule.</p>
+              <Field label="Webhook URL"><input className="txt" readOnly value={judgemeUrl} onFocus={(e) => e.currentTarget.select()} /></Field>
+            </div>
+            <div>
+              <div className="aas-h">Mailchimp · points & tier merge fields</div>
+              <p className="aas-muted" style={{ fontSize: 13, margin: "0 0 8px" }}>Keeps <b>REWARDPTS</b> and <b>REWARDTIER</b> up to date on existing audience members whenever a balance or tier changes. Never adds or unsubscribes anyone.</p>
+              <div className="st-grid two">
+                <Field label="API key" hint={program.mailchimpApiKeySet ? "Saved — leave blank to keep" : "From Mailchimp → Account → Extras → API keys"}><input className="txt" name="mailchimpApiKey" type="password" placeholder={program.mailchimpApiKeySet ? "••••••••" : "xxxxxxxx-us21"} /></Field>
+                <Field label="Audience ID" hint="Audience → Settings → Audience name and defaults"><input className="txt" name="mailchimpAudienceId" defaultValue={program.mailchimpAudienceId} placeholder="a1b2c3d4e5" /></Field>
+              </div>
+              <Toggle name="mailchimpEnabled" checked={mc} onChange={setMc} title={mc ? "Mailchimp sync is on" : "Mailchimp sync is off"} desc="Saving with this on verifies the key and creates the merge fields if missing." />
+            </div>
+          </div>
+          <div className="st-foot" style={{ marginTop: 14 }}><button className="st-btn primary" type="submit">Save integrations</button></div>
+        </Card>
       </Form>
     </s-page>
   );

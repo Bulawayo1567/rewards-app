@@ -96,6 +96,9 @@ export async function recalcCustomer(shop: string, customerId: string) {
       import("./email.server").then((m) => m.fireEvent(shop, "tier_up", customerId, { perks: newTier.perks ?? "", multiplier: String(Number(newTier.multiplier)) })).catch(() => {});
     }
   }
+  if (updated.balance !== customer.balance || tierId !== customer.tierId) {
+    import("./mailchimp.server").then((m) => m.syncMailchimp(shop, customerId)).catch(() => {});
+  }
   return updated;
 }
 
