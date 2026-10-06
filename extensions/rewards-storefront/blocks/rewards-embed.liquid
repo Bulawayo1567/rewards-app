@@ -11,6 +11,8 @@
     accountSelector: {{ block.settings.account_selector | json }},
     productPoints: {{ block.settings.product_points | json }},
     productSelector: {{ block.settings.product_selector | json }},
+    cardBadges: {{ block.settings.card_badges | json }},
+    cardSelector: {{ block.settings.card_selector | json }},
     loggedIn: {% if customer %}true{% else %}false{% endif %},
     template: {{ template.name | json }},
     accountUrl: "{{ routes.account_url }}",
@@ -45,7 +47,10 @@
     { "type": "text", "id": "account_selector", "label": "Insert before (CSS selector)", "default": ".customer-account, #MainContent, main", "info": "First match wins. Leave the default unless the panel lands in the wrong place." },
     { "type": "header", "content": "Product page" },
     { "type": "checkbox", "id": "product_points", "label": "Show 'Earn N points' on product pages", "default": true },
-    { "type": "text", "id": "product_selector", "label": "Insert after (CSS selector)", "default": ".product__price, .price, .product-single__price", "info": "First match wins." }
+    { "type": "text", "id": "product_selector", "label": "Insert after (CSS selector)", "default": ".product__price, .price, .product-single__price", "info": "First match wins." },
+    { "type": "header", "content": "Product cards" },
+    { "type": "checkbox", "id": "card_badges", "label": "Show 'Earn N points' badge on product cards", "default": true },
+    { "type": "text", "id": "card_selector", "label": "Card price elements (CSS selector)", "default": ".product-item .price, .product-card .price, .card__price, .grid-product__price, .product-item__price", "info": "Badge is added after each matching price. Adjust if cards don't show it." }
   ]
 }
 {% endschema %}

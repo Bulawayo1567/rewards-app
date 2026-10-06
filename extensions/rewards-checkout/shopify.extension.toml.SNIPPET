@@ -1,0 +1,19 @@
+After `shopify app generate extension` (Checkout UI, name rewards-checkout, Preact), replace the generated
+shopify.extension.toml with this, KEEPING ITS OWN uid LINE:
+
+api_version = "2026-07"
+
+[[extensions]]
+name = "Rewards checkout"
+handle = "rewards-checkout"
+type = "ui_extension"
+uid = "KEEP-THE-GENERATED-VALUE"
+
+[[extensions.targeting]]
+module = "./src/ThankYou.jsx"
+target = "purchase.thank-you.block.render"
+
+[extensions.capabilities]
+network_access = true
+
+Then delete the generated example file in extensions\rewards-checkout\src\ (e.g. Checkout.jsx).

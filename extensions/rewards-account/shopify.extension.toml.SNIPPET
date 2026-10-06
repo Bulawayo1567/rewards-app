@@ -1,17 +1,14 @@
-# Open extensions\rewards-account\shopify.extension.toml and make it look like this,
-# BUT KEEP YOUR EXISTING uid = "..." LINE (don't change it).
+Replace the [[extensions.targeting]] section(s) in extensions\rewards-account\shopify.extension.toml with all three below
+(keep everything else — api_version, name, handle, uid, capabilities — exactly as it is):
 
-api_version = "2025-10"
+[[extensions.targeting]]
+module = "./src/RewardsPage.jsx"
+target = "customer-account.page.render"
 
-[[extensions]]
-uid = "KEEP-YOUR-EXISTING-VALUE"
-type = "ui_extension"
-name = "Rewards"
-handle = "rewards-account"
+[[extensions.targeting]]
+module = "./src/OrderIndexBanner.jsx"
+target = "customer-account.order-index.block.render"
 
-  [[extensions.targeting]]
-  module = "./src/RewardsPage.jsx"
-  target = "customer-account.page.render"
-
-  [extensions.capabilities]
-  network_access = true
+[[extensions.targeting]]
+module = "./src/OrderStatusBlock.jsx"
+target = "customer-account.order-status.block.render"

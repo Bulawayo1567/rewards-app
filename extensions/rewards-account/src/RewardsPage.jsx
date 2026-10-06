@@ -102,13 +102,14 @@ function RewardsPage() {
         <s-grid gridTemplateColumns="1fr 1fr" gap="base">
           <EarnCard icon="thimble" title="Place an order" line={`${(program.pointsPerDollar * (me.tier ? me.tier.multiplier : 1)).toFixed(2).replace(/\.?0+$/, "")} ${pn} for every $1 spent`}
             action={<s-button variant="secondary" href={storeUrl}>Shop now</s-button>} />
-          {waysToEarn.map((w) => {
+          {waysToEarn.filter((w) => REFERRALS_ENABLED || !w.event.startsWith("REFERRAL")).map((w) => {
             const meta = EARN[w.event] || { label: w.event, icon: "button" };
             const line = `${fmt(w.points)} ${pn}`;
             if (w.event === "BIRTHDAY") return <EarnCard key={w.event} icon={meta.icon} title={meta.label} line={line} action={<BirthdayAction me={me} onDone={load} />} />;
             if (w.event === "SIGNUP") return <EarnCard key={w.event} icon={meta.icon} title={meta.label} line={line} action={<s-badge tone={me.signupAwarded ? "success" : "neutral"}>{me.signupAwarded ? "Done" : "Earned on signup"}</s-badge>} />;
-            if (w.event === "NEWSLETTER") return <EarnCard key={w.event} icon={meta.icon} title={meta.label} line={line} action={<s-badge tone={me.newsletterAwarded ? "success" : "neutral"}>{me.newsletterAwarded ? "Done" : "Subscribe at checkout"}</s-badge>} />;
-            return <EarnCard key={w.event} icon={meta.icon} title={meta.label} line={line} />;
+            if (w.event === "NEWSLETTER") return <EarnCard key={w.event} icon={meta.icon} title={meta.label} line={line} action={<SubscribeAction me={me} onDone={load} />} />;
+            if (w.event === "REVIEW") return <EarnCard key={w.event} icon={meta.icon} title={meta.label} line={`${line} · Leave a review on a product you've bought; ${pn} are added once it's approved.`} action={<s-button variant="secondary" href="shopify:customer-account/orders">My orders</s-button>} />;
+            return <EarnCard key={w.event} icon={meta.icon} title={meta.label} line={line} action={<s-badge tone="neutral">Coming soon</s-badge>} />;
           })}
         </s-grid>
         {offers.length > 0 && (
@@ -205,6 +206,24 @@ function Spend({ data, onDone }) {
           </s-stack>
         </s-box>
       )}
+    </s-stack>
+  );
+}
+
+function SubscribeAction({ me, onDone }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(null);
+  if (me.newsletterAwarded) return <s-badge tone="success">Done</s-badge>;
+  const go = async () => {
+    setBusy(true);
+    try { const j = await api("subscribe", {}); setMsg(j.awarded ? `+${fmt(j.awarded)} added!` : "Subscribed!"); onDone(); }
+    catch (e) { setMsg(e.message); }
+    finally { setBusy(false); }
+  };
+  return (
+    <s-stack gap="none" alignItems="end">
+      <s-button variant="primary" loading={busy} disabled={busy} onClick={go}>Subscribe</s-button>
+      {msg && <s-text tone="subdued">{msg}</s-text>}
     </s-stack>
   );
 }

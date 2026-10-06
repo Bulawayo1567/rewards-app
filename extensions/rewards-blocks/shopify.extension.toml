@@ -1,0 +1,19 @@
+api_version = "2026-07"
+
+[[extensions]]
+name = "Rewards blocks"
+handle = "rewards-blocks"
+type = "ui_extension"
+uid = "c5f44039-7302-db0e-e04c-cf2d694076e4f1f13d65"
+
+[[extensions.targeting]]
+module = "./src/OrderIndexBanner.jsx"
+target = "customer-account.order-index.block.render"
+
+[[extensions.targeting]]
+module = "./src/OrderStatusBlock.jsx"
+target = "customer-account.order-status.block.render"
+
+[extensions.capabilities]
+api_access = true
+network_access = true
